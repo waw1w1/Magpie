@@ -5,6 +5,9 @@
 #include "Logger.h"
 #include "StrHelper.h"
 #include "Win32Helper.h"
+#include "LocalizationService.h"
+#include "ScalingWindow.h"
+#include "shaders/OnnxPreviewCS.h"
 #include <winrt/Windows.Data.Json.h>
 #include <bcrypt.h>
 #include <fstream>
@@ -100,9 +103,28 @@ OnnxEffectDrawer::OnnxEffectDrawer(const EffectDesc& desc, DeviceResources& reso
 	}
 	if (deviceIndex < 0) throw std::runtime_error("Cannot match Magpie's adapter to DirectML");
 	_runner = std::make_unique<OnnxModelRunner>(path, desc.onnx, deviceIndex);
+	winrt::check_hresult(_device->CreateComputeShader(OnnxPreviewCS, sizeof(OnnxPreviewCS), nullptr, _previewShader.put()));
+	_previewSampler = resources.GetSampler(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP);
+	if (!_previewSampler) throw std::runtime_error("Cannot create model preview sampler");
+	const DWORD backendThreadId = GetCurrentThreadId();
+	_worker = std::make_unique<OnnxInferenceWorker>(
+		[this](std::span<const float> rgb, uint32_t width, uint32_t height, const std::function<bool()>& cancelled) {
+			auto result = _runner->Run(rgb, width, height, cancelled);
+			std::vector<uint8_t> rgba(result.size() / 3 * 4, 255);
+			for (size_t p = 0; p < result.size() / 3; ++p) {
+				if (p % 16384 == 0 && cancelled()) throw std::runtime_error("ONNX conversion cancelled");
+				for (size_t c = 0; c < 3; ++c) rgba[p * 4 + c] = uint8_t(std::lround(std::clamp(result[p * 3 + c], 0.0f, 1.0f) * 255.0f));
+			}
+			return rgba;
+		}, [this] { _runner->Cancel(); }, [backendThreadId] {
+			PostThreadMessage(backendThreadId, CommonSharedConstants::WM_MODEL_READY, 0, 0);
+		});
 }
 
 void OnnxEffectDrawer::Resize(ID3D11Texture2D* input, ID3D11Texture2D* output) {
+	_worker->Reset();
+	_hasResult = false;
+	_previewAnnounced = false;
 	input->GetDesc(&_inputDesc);
 	output->GetDesc(&_outputDesc);
 	if (_inputDesc.Format != DXGI_FORMAT_R8G8B8A8_UNORM && _inputDesc.Format != DXGI_FORMAT_B8G8R8A8_UNORM &&
@@ -115,12 +137,18 @@ void OnnxEffectDrawer::Resize(ID3D11Texture2D* input, ID3D11Texture2D* output) {
 	stagingDesc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
 	_staging = nullptr;
 	winrt::check_hresult(_device->CreateTexture2D(&stagingDesc, nullptr, _staging.put()));
+	_previewInput = nullptr;
+	_previewOutput = nullptr;
+	winrt::check_hresult(_device->CreateShaderResourceView(input, nullptr, _previewInput.put()));
+	winrt::check_hresult(_device->CreateUnorderedAccessView(output, nullptr, _previewOutput.put()));
 }
 
 bool OnnxEffectDrawer::Draw() noexcept {
 	try {
-		const auto start = std::chrono::steady_clock::now();
 		const uint32_t width = _inputDesc.Width, height = _inputDesc.Height;
+		// Only this rendering thread touches D3D11. The worker owns inference
+		// and returns CPU pixels; results invalidated by Resize are discarded.
+		auto result = _worker->TakeResult();
 		std::vector<float> rgb(size_t(width) * height * 3);
 		_context->CopyResource(_staging.get(), _input.get());
 		D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -133,19 +161,37 @@ bool OnnxEffectDrawer::Draw() noexcept {
 			}
 		}
 		_context->Unmap(_staging.get(), 0);
-		auto result = _runner->Run(rgb, width, height, []() {
-			MSG msg{};
-			return PeekMessage(&msg, nullptr, WM_QUIT, WM_QUIT, PM_NOREMOVE) != FALSE;
-		});
-		std::vector<uint8_t> rgba(size_t(_outputDesc.Width) * _outputDesc.Height * 4, 255);
-		for (size_t p = 0; p < rgba.size() / 4; ++p) {
-			for (size_t c = 0; c < 3; ++c) rgba[p * 4 + c] = uint8_t(std::lround(std::clamp(result[p * 3 + c], 0.0f, 1.0f) * 255.0f));
+		const bool matches = result && result->width == width && result->height == height && *result->input == rgb;
+		if (_worker->Submit(std::move(rgb), width, height)) _hasResult = false;
+		// Never replay an old dialogue or menu over a newer game frame. While
+		// content changes faster than inference, show its current live preview.
+		if (matches) {
+			if (result->width != width || result->height != height ||
+				result->rgba.size() != size_t(_outputDesc.Width) * _outputDesc.Height * 4) {
+				throw std::runtime_error("Unexpected asynchronous model result size");
+			}
+			_context->UpdateSubresource(_output.get(), 0, nullptr, result->rgba.data(), _outputDesc.Width * 4, 0);
+			_hasResult = true;
+			if (!_timingLogged) {
+				Logger::Get().Info(fmt::format("ONNX first inference {}x{}: {:.2f} ms (worker time; excludes D3D11 transfers)", width, height, result->milliseconds));
+				_timingLogged = true;
+			}
 		}
-		_context->UpdateSubresource(_output.get(), 0, nullptr, rgba.data(), _outputDesc.Width * 4, 0);
-		if (!_timingLogged) {
-			const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();
-			Logger::Get().Info(fmt::format("ONNX first frame {}x{}: {:.2f} ms including readback, inference and upload", width, height, ms));
-			_timingLogged = true;
+		if (!_hasResult) {
+			if (!_previewAnnounced) {
+				ScalingWindow::Get().ShowToast(LocalizationService::Get().GetLocalizedString(L"Message_ModelPreview"));
+				_previewAnnounced = true;
+			}
+			ID3D11ShaderResourceView* srv = _previewInput.get();
+			ID3D11UnorderedAccessView* uav = _previewOutput.get();
+			_context->CSSetShader(_previewShader.get(), nullptr, 0);
+			_context->CSSetShaderResources(0, 1, &srv);
+			_context->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
+			_context->CSSetSamplers(0, 1, &_previewSampler);
+			_context->Dispatch((_outputDesc.Width + 7) / 8, (_outputDesc.Height + 7) / 8, 1);
+			srv = nullptr; uav = nullptr;
+			_context->CSSetShaderResources(0, 1, &srv);
+			_context->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
 		}
 		return true;
 	} catch (const std::exception& e) {

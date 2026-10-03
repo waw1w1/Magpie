@@ -1144,4 +1144,13 @@
   <data name="Message_ModelInitializationFailed" xml:space="preserve">
     <value>超解像モデルを読み込めません。対応するモデルファイルをインストールし、選択した GPU が DirectML に対応していることを確認してください。詳細はログを参照してください。</value>
   </data>
+  <data name="Message_ModelPreview" xml:space="preserve">
+    <value>超解像モデルで処理中です。現在のフレームの処理が完了するまでバイリニアのライブプレビューを表示します。動きのある場面ではプレビューが続く場合があります。</value>
+  </data>
+  <data name="Message_ScreenshotFailed_ModelPending" xml:space="preserve">
+    <value>現在のフレームは処理中です。超解像モデルの処理完了後にエフェクトのスクリーンショットを保存してください。</value>
+  </data>
+  <data name="Overlay_ModelPreview" xml:space="preserve">
+    <value>ライブプレビュー · 超解像処理中</value>
+  </data>
 </root>

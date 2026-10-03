@@ -35,6 +35,7 @@ struct CommonSharedConstants {
 
 	static constexpr UINT WM_NOTIFY_ICON = WM_USER;
 	static constexpr UINT WM_FRONTEND_RENDER = WM_USER + 1;
+	static constexpr UINT WM_MODEL_READY = WM_USER + 2;
 
 	static constexpr const wchar_t* WM_MAGPIE_SHOWME = L"WM_MAGPIE_SHOWME";
 	static constexpr const wchar_t* WM_MAGPIE_QUIT = L"WM_MAGPIE_QUIT";

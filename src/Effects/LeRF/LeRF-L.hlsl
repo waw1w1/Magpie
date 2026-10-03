@@ -98,8 +98,9 @@ float4 Pass3(float2 pos) {
 			float3 alpha = HYPER.Load(int3(edge, 0)).rgb * 2.0 - 1.0;
 			float3 weight = max(1.0 - alpha * abs(distance.x), 0.0) * max(1.0 - alpha * abs(distance.y), 0.0);
 			if (any(abs(distance) > 1.0)) weight = 0;
-			// Parameters clamp to the edge, image samples use zero padding.
-			sum += weight * PREP.Load(int3(q, 0)).rgb;
+			// Extend the image as well as the parameters: zero padding darkens
+			// window borders even for a constant white input.
+			sum += weight * PREP.Load(int3(edge, 0)).rgb;
 			total += weight;
 		}
 	}

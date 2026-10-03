@@ -174,7 +174,7 @@ def lerf(sources):
     hyper = rng.integers(0, 256, (3, 3, 7, 9)).astype(np.float32) / 255
     for gaussian in (False, True):
         for oh, ow in [(7, 9), (14, 18), (11, 23)]:
-            ref = SteeringGaussianResize2dNumpy(support_sz=2) if gaussian else AmplifiedLinearResize2dNumpy()
+            ref = SteeringGaussianResize2dNumpy(support_sz=2, pad_mode='edge') if gaussian else AmplifiedLinearResize2dNumpy(pad_mode='edge')
             ref.set_shape(image.shape, out_shape=[3, oh, ow])
             expected = ref.resize(image, *hyper) if gaussian else ref.resize(image, hyper[0])
             actual = np.zeros((3, oh, ow), np.float32)
@@ -195,13 +195,18 @@ def lerf(sources):
                                 alpha = hyper[0, :, ey, ex] * 2 - 1
                                 weight = np.maximum(1 - alpha * abs(px - qx), 0) * np.maximum(1 - alpha * abs(py - qy), 0)
                                 if abs(px - qx) > 1 or abs(py - qy) > 1: weight[:] = 0
-                            if 0 <= qy < 7 and 0 <= qx < 9:
-                                value += weight * image[:, qy, qx]
+                            value += weight * image[:, ey, ex]
                             total += weight
                     actual[:, y, x] = value / np.maximum(total, 1e-30)
             error = float(np.max(abs(actual - expected)))
             assert error < 0.0002, (gaussian, oh, ow, error)
             print('LeRF-G' if gaussian else 'LeRF-L', (oh, ow), 'resampling max error in 8-bit units', error)
+            # The entire frame, including borders, must preserve a constant
+            # prefiltered image. This catches the former 255 -> 142 dark corner.
+            for gray in (0,128,255):
+                constant=np.full_like(image,gray)
+                actual=ref.resize(constant,*hyper) if gaussian else ref.resize(constant,hyper[0])
+                assert np.max(abs(actual-gray))<0.0002,(gaussian,gray,actual.min(),actual.max())
 
 
 def main():

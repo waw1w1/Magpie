@@ -23,6 +23,7 @@ public:
 	ScalingError Initialize(HWND hwndAttach, OverlayOptions& overlayOptions) noexcept;
 
 	bool Render(bool force = false, bool waitForGpu = false) noexcept;
+	bool IsModelPreview() const noexcept { return _modelPreview.load(std::memory_order_relaxed); }
 
 	bool OnResize() noexcept;
 
@@ -141,6 +142,7 @@ private:
 
 	// 可由所有线程访问
 	std::atomic<uint64_t> _sharedTextureMutexKey = 0;
+	std::atomic<bool> _modelPreview = false;
 
 	// INVALID_HANDLE_VALUE 表示后端初始化失败
 	std::atomic<HANDLE> _sharedTextureHandle{ NULL };

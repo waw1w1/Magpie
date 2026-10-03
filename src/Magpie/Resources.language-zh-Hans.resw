@@ -1144,4 +1144,13 @@
   <data name="Message_ModelInitializationFailed" xml:space="preserve">
     <value>无法加载超分辨率模型。请安装对应的模型文件，并确认所选显卡支持 DirectML。具体原因请查看日志。</value>
   </data>
+  <data name="Message_ModelPreview" xml:space="preserve">
+    <value>超分模型正在处理。当前画面计算完成前显示实时双线性预览；持续变化的画面可能一直处于预览状态。</value>
+  </data>
+  <data name="Message_ScreenshotFailed_ModelPending" xml:space="preserve">
+    <value>当前画面仍在处理中，请等待超分模型计算完成后再保存效果截图。</value>
+  </data>
+  <data name="Overlay_ModelPreview" xml:space="preserve">
+    <value>实时预览 · 超分处理中</value>
+  </data>
 </root>

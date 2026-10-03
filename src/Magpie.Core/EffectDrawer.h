@@ -33,6 +33,7 @@ public:
 	) noexcept;
 
 	bool Draw(EffectsProfiler& profiler) const noexcept;
+	bool IsModelPreview() const noexcept { return _onnx && !_onnx->HasResult(); }
 
 	void DrawForExport(const EffectDesc& desc, uint32_t passIdx) const noexcept;
 

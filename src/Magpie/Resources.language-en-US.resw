@@ -1144,4 +1144,13 @@
   <data name="Message_ModelInitializationFailed" xml:space="preserve">
     <value>Could not load the SR model. Install the matching model files and confirm that the selected GPU supports DirectML. See the log for details.</value>
   </data>
+  <data name="Message_ModelPreview" xml:space="preserve">
+    <value>The SR model is processing. A live bilinear preview is shown until the current frame is ready; moving scenes may remain in preview.</value>
+  </data>
+  <data name="Message_ScreenshotFailed_ModelPending" xml:space="preserve">
+    <value>The current frame is still being processed. Wait for the SR model result before saving an effect screenshot.</value>
+  </data>
+  <data name="Overlay_ModelPreview" xml:space="preserve">
+    <value>Live preview · SR processing</value>
+  </data>
 </root>

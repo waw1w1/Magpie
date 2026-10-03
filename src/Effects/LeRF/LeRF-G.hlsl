@@ -113,8 +113,8 @@ float4 Pass3(float2 pos) {
 			float3 dy = SIGMA_Y.Load(int3(edge, 0)).rgb * (10.0 * distance.y);
 			float3 dx = SIGMA_X.Load(int3(edge, 0)).rgb * (10.0 * distance.x);
 			float3 weight = exp(-0.5 * (dy * dy - 2.0 * rho * dy * dx + dx * dx));
-			// Parameters clamp to the edge, image samples use zero padding.
-			sum += weight * PREP.Load(int3(q, 0)).rgb;
+			// Use the same edge extension for the image and its parameters.
+			sum += weight * PREP.Load(int3(edge, 0)).rgb;
 			total += weight;
 		}
 	}

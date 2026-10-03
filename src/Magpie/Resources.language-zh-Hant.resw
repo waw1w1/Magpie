@@ -1144,4 +1144,13 @@
   <data name="Message_ModelInitializationFailed" xml:space="preserve">
     <value>無法載入超解析度模型。請安裝對應的模型檔案，並確認所選顯示卡支援 DirectML。詳細原因請查看記錄。</value>
   </data>
+  <data name="Message_ModelPreview" xml:space="preserve">
+    <value>超解析度模型正在處理。目前畫面計算完成前顯示即時雙線性預覽；持續變化的畫面可能一直處於預覽狀態。</value>
+  </data>
+  <data name="Message_ScreenshotFailed_ModelPending" xml:space="preserve">
+    <value>目前畫面仍在處理中，請等待超解析度模型計算完成後再儲存效果截圖。</value>
+  </data>
+  <data name="Overlay_ModelPreview" xml:space="preserve">
+    <value>即時預覽 · 超解析度處理中</value>
+  </data>
 </root>

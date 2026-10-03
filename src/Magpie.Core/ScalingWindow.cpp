@@ -1259,6 +1259,8 @@ void ScalingWindow::_Show() noexcept {
 void ScalingWindow::_ResizeRenderer() noexcept {
 	if (!_renderer->OnResize()) {
 		Logger::Get().Error("更改 Renderer 尺寸失败");
+		ShowError(ScalingError::ScalingFailedGeneral);
+		_DelayedStop();
 		return;
 	}
 

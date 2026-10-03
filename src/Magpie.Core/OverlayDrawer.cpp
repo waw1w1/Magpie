@@ -83,7 +83,8 @@ void OverlayDrawer::Draw(
 	POINT drawOffset
 ) noexcept {
 	// 所有窗口都不可见则跳过 ImGui 绘制
-	if (!AnyVisibleWindow()) {
+	const bool modelPreview = ScalingWindow::Get().Renderer().IsModelPreview();
+	if (!AnyVisibleWindow() && !modelPreview) {
 		return;
 	}
 
@@ -107,6 +108,16 @@ void OverlayDrawer::Draw(
 		}
 
 		_imguiImpl.NewFrame(_overlayOptions->windows, fittsLawAdjustment, _dpiScale);
+		if (modelPreview) {
+			// Keep a visible distinction between a live preview and a finished
+			// model result, including when the toolbar is disabled.
+			const std::string& text = _GetResourceString(L"Overlay_ModelPreview");
+			const ImVec2 size = ImGui::CalcTextSize(text.c_str());
+			const float pad = 6 * _dpiScale;
+			ImDrawList* draw = ImGui::GetForegroundDrawList();
+			draw->AddRectFilled({ pad, pad }, { size.x + 3 * pad, size.y + 3 * pad }, IM_COL32(15, 15, 15, 210));
+			draw->AddText({ 2 * pad, 2 * pad }, IM_COL32(255, 255, 255, 255), text.c_str());
+		}
 
 		bool needRedraw = false;
 		// 防止 ID 冲突

@@ -19,6 +19,8 @@ public:
 
 	std::vector<float> Run(std::span<const float> rgb, uint32_t width, uint32_t height,
 		const std::function<bool()>& cancelled = {});
+	// May be called from another thread. Run calls themselves must be serial.
+	void Cancel() noexcept;
 
 private:
 	struct Impl;

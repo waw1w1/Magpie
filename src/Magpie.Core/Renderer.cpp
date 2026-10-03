@@ -33,7 +33,8 @@ enum class TakeScreenshotResult {
 	Success,
 	InvalidDirectory,
 	InvalidFilenameTemplate,
-	InternalError
+	InternalError,
+	ModelPending
 };
 
 // 大多数时候会在最后添加 Bicubic 来降采样或升采样，因此缓存在内存中
@@ -226,7 +227,8 @@ winrt::fire_and_forget Renderer::TakeScreenshot(
 		const wchar_t* errorMsgs[] = {
 			L"Message_ScreenshotFailed_InvalidDirectory",
 			L"Message_ScreenshotFailed_InvalidFilenameTemplate",
-			L"Message_ScreenshotFailed_InternalError"
+			L"Message_ScreenshotFailed_InternalError",
+			L"Message_ScreenshotFailed_ModelPending"
 		};
 		ScalingWindow::Get().ShowToast(
 			ls.GetLocalizedString(L"Message_ScreenshotFailed_Title"),
@@ -330,7 +332,7 @@ bool Renderer::OnResize() noexcept {
 
 	_sharedTextureHandle.store(NULL, std::memory_order_relaxed);
 
-	_backendThreadDispatcher.TryEnqueue([this]() {
+	if (!_backendThreadDispatcher.TryEnqueue([this]() {
 		ID3D11Texture2D* outputTexture = _ResizeEffects();
 		if (!outputTexture) {
 			Logger::Get().Win32Error("_ResizeEffects 失败");
@@ -358,7 +360,9 @@ bool Renderer::OnResize() noexcept {
 
 		_sharedTextureHandle.store(sharedHandle, std::memory_order_release);
 		_sharedTextureHandle.notify_one();
-	});
+	})) {
+		return false;
+	}
 
 	// 等待后端更改分辨率和渲染
 	_sharedTextureHandle.wait(NULL, std::memory_order_relaxed);
@@ -852,6 +856,9 @@ void Renderer::_BackendThreadProc() noexcept {
 
 		// 不能在前端线程释放
 		_frameSource.reset();
+		// Join model workers while their notification thread and D3D resources
+		// still exist. Cancellation interrupts ORT and is also checked per tile.
+		_effectDrawers.clear();
 	});
 
 	StepTimerStatus stepTimerStatus = StepTimerStatus::WaitingForNewFrame;
@@ -859,6 +866,7 @@ void Renderer::_BackendThreadProc() noexcept {
 		_frameSource->WaitType() == FrameSourceWaitType::WaitForMessage;
 
 	MSG msg;
+	bool modelReady = false;
 	while (true) {
 		bool fpsUpdated = false;
 		stepTimerStatus = _stepTimer.WaitForNextFrame(
@@ -870,18 +878,22 @@ void Renderer::_BackendThreadProc() noexcept {
 			if (msg.message == WM_QUIT) {
 				return;
 			}
+			if (msg.message == CommonSharedConstants::WM_MODEL_READY) {
+				modelReady = true;
+				continue;
+			}
 
 			DispatchMessage(&msg);
 		}
 
-		if (stepTimerStatus == StepTimerStatus::WaitingForFPSLimiter) {
+		if (stepTimerStatus == StepTimerStatus::WaitingForFPSLimiter && !modelReady) {
 			// 新帧消息可能已被处理，之后的 WaitForNextFrame 不要等待消息，直到状态变化
 			continue;
 		}
 
 		switch (_frameSource->Update()) {
 		case FrameSourceState::Waiting:
-			if (stepTimerStatus != StepTimerStatus::ForceNewFrame) {
+			if (stepTimerStatus != StepTimerStatus::ForceNewFrame && !modelReady) {
 				if (fpsUpdated) {
 					// FPS 变化则要求前端重新渲染以更新叠加层，调整大小时这个操作十分必要
 					PostMessage(ScalingWindow::Get().Handle(),
@@ -893,6 +905,7 @@ void Renderer::_BackendThreadProc() noexcept {
 			// 强制帧
 			[[fallthrough]];
 		case FrameSourceState::NewFrame:
+			modelReady = false;
 			if (!_BackendRender(_effectDrawers.back().GetOutputTexture())) {
 				const uint32_t runId = ScalingWindow::RunId();
 				ScalingWindow::Dispatcher().TryEnqueue([runId]() {
@@ -1036,12 +1049,15 @@ bool Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 
 	_effectsProfiler.OnBeginEffects(d3dDC);
 
+	bool modelPreview = false;
 	for (const EffectDrawer& effectDrawer : _effectDrawers) {
 		if (!effectDrawer.Draw(_effectsProfiler)) {
 			_effectsProfiler.OnEndEffects(d3dDC);
 			return false;
 		}
+		modelPreview = modelPreview || effectDrawer.IsModelPreview();
 	}
+	_modelPreview.store(modelPreview, std::memory_order_relaxed);
 
 	_effectsProfiler.OnEndEffects(d3dDC);
 
@@ -1177,6 +1193,11 @@ winrt::IAsyncOperation<int> Renderer::_TakeScreenshotImpl(
 	// 2. 转到线程池等待 GPU 完成
 	// 3. 转到后端线程复制纹理数据到内存
 	// 4. 转到线程池写入图片
+	for (uint32_t i = 0; i <= effectIdx; ++i) {
+		if (_effectDrawers[i].IsModelPreview()) {
+			co_return (int)TakeScreenshotResult::ModelPending;
+		}
+	}
 
 	ID3D11Device5* d3dDevice = _backendResources.GetD3DDevice();
 	ID3D11DeviceContext4* d3dDC = _backendResources.GetD3DDC();

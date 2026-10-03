@@ -73,6 +73,11 @@ p = subprocess.run(
 if p.returncode != 0:
     raise Exception("编译失败")
 
+# Check the prebuilt ONNX runtime's transitive CRT dependencies in the actual
+# portable output, before it can be packaged or distributed.
+subprocess.run([sys.executable, "scripts/validation/check_windows_runtime.py",
+                os.path.join("publish", args.platform)], check=True)
+
 #####################################################################
 #
 # 清理不需要的文件

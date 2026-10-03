@@ -17,6 +17,7 @@ struct OnnxModelRunner::Impl {
 	OnnxModelDesc desc;
 	Ort::Env env{ ORT_LOGGING_LEVEL_WARNING, "Magpie" };
 	Ort::Session session{ nullptr };
+	Ort::RunOptions runOptions;
 	std::string inputName, outputName;
 	ONNXTensorElementDataType inputType{}, outputType{};
 
@@ -76,6 +77,14 @@ OnnxModelRunner::OnnxModelRunner(const std::filesystem::path& path, const OnnxMo
 
 OnnxModelRunner::~OnnxModelRunner() = default;
 
+void OnnxModelRunner::Cancel() noexcept {
+	try {
+		_impl->runOptions.SetTerminate();
+	} catch (...) {
+		// The cancellation callback also checks between tiles.
+	}
+}
+
 std::vector<float> OnnxModelRunner::Run(std::span<const float> rgb, uint32_t width, uint32_t height,
 	const std::function<bool()>& cancelled) {
 	const auto& config = _impl->desc;
@@ -84,11 +93,17 @@ std::vector<float> OnnxModelRunner::Run(std::span<const float> rgb, uint32_t wid
 		rgb.size() != size_t(width) * height * 3) {
 		throw std::invalid_argument("Invalid input size for ONNX scaling");
 	}
+	_impl->runOptions.UnsetTerminate();
+	if (cancelled && cancelled()) throw std::runtime_error("ONNX inference cancelled");
 	const uint32_t stride = tile - 2 * border;
+	// Keep half the halo as convolution context, and blend the other half.
+	// Tile origins/stride stay aligned to the model's attention windows.
+	const uint32_t feather = border / 2;
 	const uint32_t outWidth = width * scale, outTile = tile * scale;
 	const size_t area = size_t(tile) * tile;
 	const size_t outArea = size_t(outTile) * outTile;
 	std::vector<float> result(size_t(outWidth) * height * scale * 3);
+	std::vector<float> weights(size_t(outWidth) * height * scale);
 	std::vector<float> input(area * 3);
 	std::vector<Ort::Float16_t> halfInput;
 	if (_impl->inputType == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16) halfInput.resize(input.size());
@@ -96,6 +111,12 @@ std::vector<float> OnnxModelRunner::Run(std::span<const float> rgb, uint32_t wid
 	const auto memory = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 	const char* inName = _impl->inputName.c_str();
 	const char* outName = _impl->outputName.c_str();
+	auto blendWeight = [stride, feather, scale](int64_t p) {
+		if (feather == 0) return 1.0f;
+		const float position = (float(p) + 0.5f) / float(scale);
+		const float ramp = std::min(position + float(feather), float(stride + feather) - position);
+		return std::clamp(ramp / float(2 * feather), 0.0f, 1.0f);
+	};
 
 	for (uint32_t top = 0; top < height; top += stride) {
 		for (uint32_t left = 0; left < width; left += stride) {
@@ -116,7 +137,7 @@ std::vector<float> OnnxModelRunner::Run(std::span<const float> rgb, uint32_t wid
 				std::transform(input.begin(), input.end(), halfInput.begin(), [](float v) { return Ort::Float16_t(v); });
 				tensor = Ort::Value::CreateTensor<Ort::Float16_t>(memory, halfInput.data(), halfInput.size(), shape.data(), shape.size());
 			}
-			auto outputs = _impl->session.Run(Ort::RunOptions{ nullptr }, &inName, &tensor, 1, &outName, 1);
+			auto outputs = _impl->session.Run(_impl->runOptions, &inName, &tensor, 1, &outName, 1);
 			const auto info = outputs[0].GetTensorTypeAndShapeInfo();
 			const std::vector<int64_t> expected{ 1, 3, outTile, outTile };
 			if (info.GetShape() != expected || info.GetElementType() != _impl->outputType) {
@@ -125,20 +146,28 @@ std::vector<float> OnnxModelRunner::Run(std::span<const float> rgb, uint32_t wid
 			const float* fp32 = _impl->outputType == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT
 				? outputs[0].GetTensorData<float>() : nullptr;
 			const Ort::Float16_t* fp16 = fp32 ? nullptr : outputs[0].GetTensorData<Ort::Float16_t>();
-			const uint32_t rows = std::min(stride, height - top) * scale;
-			const uint32_t cols = std::min(stride, width - left) * scale;
-			for (uint32_t y = 0; y < rows; ++y) {
-				for (uint32_t x = 0; x < cols; ++x) {
-					const size_t src = size_t(y + border * scale) * outTile + x + border * scale;
-					const size_t dst = (size_t(top * scale + y) * outWidth + left * scale + x) * 3;
+			const int64_t firstY = -int64_t(std::min(feather, top)) * scale;
+			const int64_t firstX = -int64_t(std::min(feather, left)) * scale;
+			const int64_t rows = int64_t(std::min(stride + feather, height - top)) * scale;
+			const int64_t cols = int64_t(std::min(stride + feather, width - left)) * scale;
+			for (int64_t y = firstY; y < rows; ++y) {
+				for (int64_t x = firstX; x < cols; ++x) {
+					const size_t src = size_t(y + border * scale) * outTile + size_t(x + border * scale);
+					const size_t pixel = size_t(int64_t(top) * scale + y) * outWidth + size_t(int64_t(left) * scale + x);
+					const float weight = blendWeight(y) * blendWeight(x);
+					weights[pixel] += weight;
 					for (size_t c = 0; c < 3; ++c) {
 						const float value = fp32 ? fp32[c * outArea + src] : fp16[c * outArea + src].ToFloat();
 						if (!std::isfinite(value)) throw std::runtime_error("Non-finite ONNX output");
-						result[dst + c] = value;
+						result[pixel * 3 + c] += value * weight;
 					}
 				}
 			}
 		}
+	}
+	for (size_t p = 0; p < weights.size(); ++p) {
+		if (p % outWidth == 0 && cancelled && cancelled()) throw std::runtime_error("ONNX inference cancelled");
+		for (size_t c = 0; c < 3; ++c) result[p * 3 + c] /= weights[p];
 	}
 	return result;
 }

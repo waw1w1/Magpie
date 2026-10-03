@@ -45,6 +45,8 @@
   <ItemGroup>
     <ClInclude Include="include\OnnxModelDesc.h" />
     <ClInclude Include="OnnxModelRunner.h" />
+    <ClInclude Include="OnnxInferenceWorker.h" />
+    <ClCompile Include="OnnxInferenceWorker.cpp" />
     <ClInclude Include="OnnxEffectDrawer.h" />
     <ClCompile Include="OnnxModelRunner.cpp" />
     <ClCompile Include="OnnxEffectDrawer.cpp" />
@@ -137,6 +139,9 @@
     <ClCompile Include="WindowHelper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <FxCompile Include="shaders\OnnxPreviewCS.hlsl">
+      <ShaderType>Compute</ShaderType>
+    </FxCompile>
     <FxCompile Include="shaders\DuplicateFrameCS.hlsl">
       <ShaderType>Compute</ShaderType>
     </FxCompile>
