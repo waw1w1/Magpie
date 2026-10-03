@@ -5,8 +5,12 @@ This checks the known seam regression, not a general Galgame quality benchmark.
 """
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
+
+# Opt out before importing ORT; child runners inherit this before library startup.
+os.environ['ORT_DISABLE_TELEMETRY'] = '1'
 
 import numpy as np
 import onnxruntime as ort
@@ -20,6 +24,11 @@ def main():
     parser.add_argument('--models', type=Path, required=True)
     parser.add_argument('--runner', type=Path, required=True)
     args = parser.parse_args()
+    runner_version = subprocess.run([str(args.runner.resolve()), '--ort-version'],
+                                    check=True, capture_output=True, text=True).stdout.strip()
+    print(f'ONNX Runtime versions: C++ {runner_version}, Python {ort.__version__}', flush=True)
+    if runner_version != ort.__version__:
+        parser.error('C++ and Python ONNX Runtime versions must match; rebuild the runner or install the matching Python package.')
     out = ROOT / 'obj' / 'seam-check'
     out.mkdir(parents=True, exist_ok=True)
     x, y = np.meshgrid(np.linspace(0, 1, 128), np.linspace(0, 1, 128))

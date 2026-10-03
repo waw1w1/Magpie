@@ -8,10 +8,14 @@ No files are uploaded. Model licenses are independent of Magpie's GPL license.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 import urllib.request
 import zipfile
+
+# ORT initializes telemetry during import, before its runtime opt-out API can run.
+os.environ['ORT_DISABLE_TELEMETRY'] = '1'
 
 ROOT = Path(__file__).resolve().parents[1]
 

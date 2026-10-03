@@ -46,9 +46,14 @@
     <ClInclude Include="include\OnnxModelDesc.h" />
     <ClInclude Include="OnnxModelRunner.h" />
     <ClInclude Include="OnnxInferenceWorker.h" />
-    <ClCompile Include="OnnxInferenceWorker.cpp" />
+    <!-- These portable files conditionally include pch.h; /Yu would skip the opening #ifdef. -->
+    <ClCompile Include="OnnxInferenceWorker.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClInclude Include="OnnxEffectDrawer.h" />
-    <ClCompile Include="OnnxModelRunner.cpp" />
+    <ClCompile Include="OnnxModelRunner.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="OnnxEffectDrawer.cpp" />
     <ClInclude Include="include\AppXReader.h" />
     <ClInclude Include="include\ScreenshotFilenameTemplateHelper.h" />

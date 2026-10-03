@@ -2,6 +2,24 @@
 // Copyright (c) 2024 Jiacheng Li. See LICENSE.txt.
 // Source revision: 8099191508de171c0d7c16fb42a11c5848bb94d0
 
+void LeRFSupport(float2 pos, out int2 first, out float2 offset) {
+	uint2 outputSize = GetOutputSize();
+	// Recover the pixel center before the PS wrapper's normalized-position
+	// rounding can change a support endpoint. D3D11 sizes fit these uint products.
+	uint2 pixel = uint2(pos * float2(outputSize));
+	uint2 center = (2u * pixel + 1u) * GetInputSize();
+	uint2 denominator = 2u * outputSize;
+	// ceil(((2*p+1)*input-output)/(2*output)) - 1, evaluated exactly.
+	// Integer projections deliberately keep the left/top endpoint.
+	first = int2((center + outputSize - 1u) / denominator) - 1;
+	int2 remainder = int2(center) - int2(outputSize) - first * int2(denominator);
+	// Keep distances local: no subtraction of two large rounded coordinates.
+	offset = float2(remainder) / float2(denominator);
+	// D3D division may use an approximate reciprocal, even for equal operands.
+	offset.x = (remainder.x == int(denominator.x)) ? 1.0 : offset.x;
+	offset.y = (remainder.y == int(denominator.y)) ? 1.0 : offset.y;
+}
+
 int2 RotateTap(int2 p, uint rotation) {
 	// np.rot90's positive rotation, mapped back to the unrotated image.
 	if (rotation == 1) return int2(-p.y, p.x);

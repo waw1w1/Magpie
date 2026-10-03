@@ -1,4 +1,8 @@
 from pathlib import Path
+import os
+# Opt out before importing ORT; child runners inherit this before library startup.
+os.environ['ORT_DISABLE_TELEMETRY'] = '1'
+
 import numpy as np, onnx, onnxruntime as ort, subprocess, time
 from onnx import helper as h, TensorProto as T
 import argparse
@@ -7,6 +11,10 @@ parser.add_argument('--models',type=Path,required=True)
 parser.add_argument('--runner',type=Path,required=True)
 parser.add_argument('--synthetic-only',action='store_true')
 args=parser.parse_args()
+runner_version=subprocess.run([str(args.runner.resolve()),'--ort-version'],check=True,capture_output=True,text=True).stdout.strip()
+print(f'ONNX Runtime versions: C++ {runner_version}, Python {ort.__version__}',flush=True)
+if runner_version!=ort.__version__:
+ parser.error('C++ and Python ONNX Runtime versions must match; rebuild the runner or install the matching Python package.')
 root=Path(__file__).resolve().parents[2]/'obj'
 root.mkdir(exist_ok=True)
 heavy=args.models
