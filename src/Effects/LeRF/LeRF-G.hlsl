@@ -100,15 +100,15 @@ void Pass2(uint2 blockStart, uint3 tid) {
 //!STYLE PS
 float4 Pass3(float2 pos) {
 	if (any(GetScale() < 1.0)) return INPUT.SampleLevel(SL, pos, 0);
-	float2 projected = pos * GetInputSize() - 0.5;
-	// Authors' evaluation uses support size 2 for both L and G.
-	int2 first = int2(ceil(projected - 1.0 - 1e-6));
+	int2 first;
+	float2 offset;
+	LeRFSupport(pos, first, offset);
 	float3 sum = 0, total = 0;
 	[unroll] for (int y = 0; y < 2; ++y) {
 		[unroll] for (int x = 0; x < 2; ++x) {
 			int2 q = first + int2(x, y);
 			int2 edge = clamp(q, 0, int2(GetInputSize()) - 1);
-			float2 distance = projected - float2(q);
+			float2 distance = offset - float2(x, y);
 			float3 rho = RHO.Load(int3(edge, 0)).rgb * 2.0 - 1.0;
 			float3 dy = SIGMA_Y.Load(int3(edge, 0)).rgb * (10.0 * distance.y);
 			float3 dx = SIGMA_X.Load(int3(edge, 0)).rgb * (10.0 * distance.x);

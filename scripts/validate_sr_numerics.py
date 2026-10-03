@@ -7,11 +7,15 @@ of the translated pass schedule. All sources must match scripts/*_sources.json.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
+
+# ORT initializes telemetry during import, before its runtime opt-out API can run.
+os.environ['ORT_DISABLE_TELEMETRY'] = '1'
 
 import numpy as np
 import onnxruntime as ort

@@ -48,8 +48,13 @@ def imports(path):
 
 
 def check(folder):
+    executable = folder/'Magpie.exe'
+    if not executable.is_file():
+        raise ValueError('Missing application executable: Magpie.exe')
+    expected_machine, _ = imports(executable)
+    if expected_machine not in (0x8664, 0xaa64):
+        raise ValueError(f'Unsupported application architecture: {expected_machine:#x}')
     files = {p.name.lower():p for p in folder.glob('*.dll')}
-    expected_machine = None
     pending = ['onnxruntime.dll','onnxruntime_providers_shared.dll','directml.dll']
     visited = set()
     while pending:
@@ -60,8 +65,6 @@ def check(folder):
         if name not in files:
             raise ValueError(f'Missing app-local runtime dependency: {name}')
         machine, dependencies = imports(files[name])
-        if expected_machine is None:
-            expected_machine = machine
         if machine != expected_machine:
             raise ValueError(f'Runtime architecture mismatch: {name}')
         pending.extend(d for d in dependencies if d.startswith(('msvcp','vcruntime','concrt')))
