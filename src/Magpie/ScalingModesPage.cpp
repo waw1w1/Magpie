@@ -5,6 +5,8 @@
 #endif
 #include "ControlHelper.h"
 #include "EffectsService.h"
+#include "LocalizationService.h"
+#include "RecommendedEffects.h"
 #include <parallel_hashmap/phmap.h>
 
 using namespace ::Magpie;
@@ -70,80 +72,90 @@ void ScalingModesPage::RemoveScalingModeMenuItem_Click(IInspectable const& sende
 }
 
 void ScalingModesPage::_BuildEffectMenu() noexcept {
-	std::vector<MenuFlyoutItemBase> rootItems;
+	_addEffectMenuFlyout.Items().Clear();
+	std::array<MenuFlyoutSubItem, 2> groups;
+	groups[0].Text(LocalizationService::Get().GetLocalizedString(L"ScalingModes_RecommendedEffects"));
+	groups[1].Text(LocalizationService::Get().GetLocalizedString(L"ScalingModes_OtherEffects"));
+	for (uint32_t groupIdx = 0; groupIdx < groups.size(); ++groupIdx) {
+		std::vector<MenuFlyoutItemBase> rootItems;
 
-	phmap::flat_hash_map<std::wstring_view, MenuFlyoutSubItem> folders;
-	folders.reserve(13);
-	for (const auto& effect : EffectsService::Get().Effects()) {
-		std::wstring_view name(effect.name);
+		phmap::flat_hash_map<std::wstring_view, MenuFlyoutSubItem> folders;
+		folders.reserve(13);
+		for (const auto& effect : EffectsService::Get().Effects()) {
+			std::wstring_view name(effect.name);
+			if (IsRecommendedEffect(name) != (groupIdx == 0)) {
+				continue;
+			}
 
-		MenuFlyoutItem item;
-		item.Tag(box_value(effect.name));
-		item.Click({ this, &ScalingModesPage::_AddEffectMenuFlyoutItem_Click });
+			MenuFlyoutItem item;
+			item.Tag(box_value(effect.name));
+			item.Click({ this, &ScalingModesPage::_AddEffectMenuFlyoutItem_Click });
 
-		size_t delimPos = name.find_last_of(L'\\');
-		if (delimPos == std::wstring::npos) {
-			item.Text(name);
-			rootItems.emplace_back(std::move(item));
-			continue;
+			size_t delimPos = name.find_last_of(L'\\');
+			if (delimPos == std::wstring::npos) {
+				item.Text(name);
+				rootItems.emplace_back(std::move(item));
+				continue;
+			}
+
+			item.Text(name.substr(delimPos + 1));
+
+			std::wstring_view dir = name.substr(0, delimPos);
+			auto it = folders.find(dir);
+			if (it != folders.end()) {
+				it->second.Items().Append(item);
+			} else {
+				MenuFlyoutSubItem folder;
+				folder.Text(hstring(dir));
+				folder.Items().Append(item);
+
+				rootItems.push_back(folder);
+				folders.emplace(dir, folder);
+			}
 		}
 
-		item.Text(name.substr(delimPos + 1));
+		std::sort(rootItems.begin(), rootItems.end(), [](MenuFlyoutItemBase const& l, MenuFlyoutItemBase const& r) {
+			bool isLSubMenu = get_class_name(l) == name_of<MenuFlyoutSubItem>();
+			bool isRSubMenu = get_class_name(r) == name_of<MenuFlyoutSubItem>();
 
-		std::wstring_view dir = name.substr(0, delimPos);
-		auto it = folders.find(dir);
-		if (it != folders.end()) {
-			it->second.Items().Append(item);
-		} else {
-			MenuFlyoutSubItem folder;
-			folder.Text(hstring(dir));
-			folder.Items().Append(item);
+			if (isLSubMenu != isRSubMenu) {
+				return isLSubMenu;
+			}
 
-			rootItems.push_back(folder);
-			folders.emplace(dir, folder);
-		}
-	}
-
-	std::sort(rootItems.begin(), rootItems.end(), [](MenuFlyoutItemBase const& l, MenuFlyoutItemBase const& r) {
-		bool isLSubMenu = get_class_name(l) == name_of<MenuFlyoutSubItem>();
-		bool isRSubMenu = get_class_name(r) == name_of<MenuFlyoutSubItem>();
-
-		if (isLSubMenu != isRSubMenu) {
-			return isLSubMenu;
-		}
-
-		if (isLSubMenu) {
-			return l.try_as<MenuFlyoutSubItem>().Text() < r.try_as<MenuFlyoutSubItem>().Text();
-		} else {
-			return l.try_as<MenuFlyoutItem>().Text() < r.try_as<MenuFlyoutItem>().Text();
-		}
-	});
-
-	// 排序文件夹中的项目
-	for (MenuFlyoutItemBase& item : rootItems) {
-		MenuFlyoutSubItem folder = item.try_as<MenuFlyoutSubItem>();
-		if (!folder) {
-			break;
-		}
-
-		IVector<MenuFlyoutItemBase> items = folder.Items();
-		// 读取到 std::vector 中以提高排序性能
-		std::vector<MenuFlyoutItemBase> itemsVec(items.Size(), nullptr);
-		items.GetMany(0, itemsVec);
-		std::sort(itemsVec.begin(), itemsVec.end(), [](const MenuFlyoutItemBase& l, const MenuFlyoutItemBase& r) {
-			hstring lEffectName = unbox_value<hstring>(l.try_as<MenuFlyoutItem>().Tag());
-			hstring rEffectName = unbox_value<hstring>(r.try_as<MenuFlyoutItem>().Tag());
-
-			const EffectInfo* lEffectInfo = EffectsService::Get().GetEffect(lEffectName);
-			const EffectInfo* rEffectInfo = EffectsService::Get().GetEffect(rEffectName);
-
-			return lEffectInfo->sortName < rEffectInfo->sortName;
+			if (isLSubMenu) {
+				return l.try_as<MenuFlyoutSubItem>().Text() < r.try_as<MenuFlyoutSubItem>().Text();
+			} else {
+				return l.try_as<MenuFlyoutItem>().Text() < r.try_as<MenuFlyoutItem>().Text();
+			}
 		});
-		items.ReplaceAll(itemsVec);
-	}
 
-	for (MenuFlyoutItemBase& item : rootItems) {
-		_addEffectMenuFlyout.Items().Append(std::move(item));
+		// 排序文件夹中的项目
+		for (MenuFlyoutItemBase& item : rootItems) {
+			MenuFlyoutSubItem folder = item.try_as<MenuFlyoutSubItem>();
+			if (!folder) {
+				break;
+			}
+
+			IVector<MenuFlyoutItemBase> items = folder.Items();
+			// 读取到 std::vector 中以提高排序性能
+			std::vector<MenuFlyoutItemBase> itemsVec(items.Size(), nullptr);
+			items.GetMany(0, itemsVec);
+			std::sort(itemsVec.begin(), itemsVec.end(), [](const MenuFlyoutItemBase& l, const MenuFlyoutItemBase& r) {
+				hstring lEffectName = unbox_value<hstring>(l.try_as<MenuFlyoutItem>().Tag());
+				hstring rEffectName = unbox_value<hstring>(r.try_as<MenuFlyoutItem>().Tag());
+
+				const EffectInfo* lEffectInfo = EffectsService::Get().GetEffect(lEffectName);
+				const EffectInfo* rEffectInfo = EffectsService::Get().GetEffect(rEffectName);
+
+				return lEffectInfo->sortName < rEffectInfo->sortName;
+			});
+			items.ReplaceAll(itemsVec);
+		}
+
+		for (MenuFlyoutItemBase& item : rootItems) {
+			groups[groupIdx].Items().Append(std::move(item));
+		}
+		_addEffectMenuFlyout.Items().Append(groups[groupIdx]);
 	}
 }
 

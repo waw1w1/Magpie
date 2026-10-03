@@ -113,6 +113,9 @@
     <ClInclude Include="ScalingMode.h">
       <Filter>Models</Filter>
     </ClInclude>
+    <ClInclude Include="RecommendedEffects.h">
+      <Filter>Services</Filter>
+    </ClInclude>
     <ClInclude Include="EffectsService.h">
       <Filter>Services</Filter>
     </ClInclude>

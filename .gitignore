@@ -432,3 +432,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+# Optional downloaded/exported SR weights
+src/Effects/ONNX/*.onnx
+src/Effects/ONNX/*.onnx.data

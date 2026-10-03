@@ -1,0 +1,103 @@
+{
+  "repository": "ddlee-cn/LeRF-PyTorch",
+  "commit": "8099191508de171c0d7c16fb42a11c5848bb94d0",
+  "license": "MIT",
+  "models": [
+    {
+      "name": "LeRF-L",
+      "tables": [
+        {
+          "path": "models/lerf-l/LUTft_s1_sr0.npy",
+          "sha256": "03f51285e7755323b4e055ad47eabc33df6257f31afbf37547425c849220aff2"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s1_cr0.npy",
+          "sha256": "3a320b9bc8f40a2a139d27488e42ac2d98c7728d3960adb34ef4b521a81b19c7"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s1_tr0.npy",
+          "sha256": "8c2471585e4c7165a5c7f47ce59c2b29e06c8422a8896b475b895001f52b848a"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_sr0.npy",
+          "sha256": "75d55561298dc7bea07e3dd523458b70b45e39c84753041dcbe22a423f60345f"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_sr1.npy",
+          "sha256": "fb22ed81f07064a6f6f0bb925d11f02dfc5890c596dc410ed7efba56814a629b"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_cr0.npy",
+          "sha256": "7790d7d846e79b0815a3644dde5cd59ec04924d64518586d8fd7891c261251ff"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_cr1.npy",
+          "sha256": "ccf32e753be53abffbf94c545c085739531b52f32c6e8b8196f0fb26d6c31529"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_tr0.npy",
+          "sha256": "0da09eff946028383840823ba98c795c4690eef5c58641c5f579da4eb7bd1e12"
+        },
+        {
+          "path": "models/lerf-l/LUTft_s2_tr1.npy",
+          "sha256": "6b9cac994470b4551dcc8c8bc3de55bd9719f71ae398d2fcb59528a9c9a0e6ec"
+        }
+      ]
+    },
+    {
+      "name": "LeRF-G",
+      "tables": [
+        {
+          "path": "models/lerf-g/LUTft_s1_sr0.npy",
+          "sha256": "76861dcde48d05efe109a77be5de1fbd7a5a8e53e53863cbb2738dfd673fb83f"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s1_cr0.npy",
+          "sha256": "327a6d9ad88fa363674418d7b9e4b1160443d842bd2259f63b937b8944c0f768"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s1_tr0.npy",
+          "sha256": "2654032836f1175b6d020464c927533b5113727eb56da2693ad91abbe8a125e0"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_sr0.npy",
+          "sha256": "724131822791991bf9cbc229ae4b8405fdf6712f1c69b81f90ea0ea31eb15144"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_sr1.npy",
+          "sha256": "3b51e22f3139f0ed8d7e12a7034587fa35a008ee5d2656a3a88b9c0622f582b0"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_cr0.npy",
+          "sha256": "2877c5922481d85b2f226de66c6e2b5b56d00689e251acb930ab69076256c9d8"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_cr1.npy",
+          "sha256": "5b9644923274fba0718a28da3999bc2cf42ec94cf669bb61150bb345cff1a121"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_tr0.npy",
+          "sha256": "b346a9465b330d278f2b4686ac63918664cbe3a4f0b3d659e978b54eb9c1f27f"
+        },
+        {
+          "path": "models/lerf-g/LUTft_s2_tr1.npy",
+          "sha256": "990260cf1f530f520aa64638d3d27578a4d2b3dc328ad60dd8ea9bb97468bf4e"
+        }
+      ]
+    }
+  ],
+  "references": [
+    {
+      "path": "resample/eval_lut_sr.py",
+      "sha256": "ab0ff393c424dffe4289fdcbae6ac1a413a5201567c7104771e8c19d251802b7"
+    },
+    {
+      "path": "resize_right/resize_right2d_numpy.py",
+      "sha256": "ac6574b225889ec8d5301f247389db5d1d11ced104fb63001189be0acc73cee3"
+    },
+    {
+      "path": "resize_right/interp_methods.py",
+      "sha256": "1ab8410c28bcc511c0372c9c40d9f62a00d707e988cd1444596c78178b1f6b7f"
+    }
+  ]
+}

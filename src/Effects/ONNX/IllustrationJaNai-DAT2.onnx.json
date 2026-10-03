@@ -1,0 +1,12 @@
+{
+  "name": "IllustrationJaNai V1 DAT2",
+  "file": "IllustrationJaNai-DAT2.onnx",
+  "scale": 4,
+  "tileSize": 128,
+  "overlap": 32,
+  "author": "the-database",
+  "license": "CC-BY-NC-SA-4.0",
+  "source": "https://openmodeldb.info/models/4x-IllustrationJaNai-V1-DAT2",
+  "version": 1,
+  "sha256": "14a2d1068aaefc39bdba0c9252bd370236596578cc6a909b0e7e2726a2cb85aa"
+}

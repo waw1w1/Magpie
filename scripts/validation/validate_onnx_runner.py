@@ -1,0 +1,36 @@
+from pathlib import Path
+import numpy as np, onnx, onnxruntime as ort, subprocess, time
+from onnx import helper as h, TensorProto as T
+import argparse
+parser=argparse.ArgumentParser(description='Compare the portable C++ tile runner against independent ONNX reference inference.')
+parser.add_argument('--models',type=Path,required=True)
+parser.add_argument('--runner',type=Path,required=True)
+args=parser.parse_args()
+root=Path(__file__).resolve().parents[2]/'obj'
+root.mkdir(exist_ok=True)
+heavy=args.models
+opt=ort.SessionOptions();opt.intra_op_num_threads=2
+# A deterministic model verifies stitching, channel order, odd sizes and edges.
+model=h.make_model(h.make_graph([h.make_node('Resize',['input','','scales'],['output'],mode='nearest',coordinate_transformation_mode='asymmetric')],'nearest',[h.make_tensor_value_info('input',T.FLOAT,[1,3,'H','W'])],[h.make_tensor_value_info('output',T.FLOAT,[1,3,'OH','OW'])],[h.make_tensor('scales',T.FLOAT,[4],[1,1,2,2])]),opset_imports=[h.make_opsetid('',17)]);model.ir_version=10
+onnx.save(model,root/'nearest-test.onnx')
+models=[(root/'nearest-test.onnx',2,32,8,43,39),(heavy/'2x-AnimeSharpV4_Fast_RCAN_PU_fp16_opset17.onnx',2,128,32,67,3),(heavy/'2x-AnimeSharpV4_RCAN_fp16_op17.onnx',2,128,32,67,3),(heavy/'IllustrationJaNai-DAT2.onnx',4,128,32,67,3)]
+for path,scale,tile,border,width,height in models:
+ rng=np.random.default_rng(13);image=rng.random((height,width,3),dtype=np.float32);image[:,:3]=[1,0,0];image.tofile(root/'model-input.f32')
+ before=time.monotonic();p=subprocess.run([str(args.runner.resolve()),str(path),str(scale),str(tile),str(border),str(width),str(height),str(root/'model-input.f32'),str(root/'model-output.f32')],check=True,capture_output=True,text=True);print(path.name,p.stdout.strip(),flush=True)
+ actual=np.fromfile(root/'model-output.f32',np.float32).reshape(height*scale,width*scale,3)
+ if path.name.startswith('nearest'):
+  expected=np.repeat(np.repeat(image,scale,axis=0),scale,axis=1)
+ else:
+  session=ort.InferenceSession(str(path),opt,providers=['CPUExecutionProvider']);dtype=np.float16 if session.get_inputs()[0].type=='tensor(float16)' else np.float32
+  expected=np.empty_like(actual);stride=tile-2*border
+  # Independent reference implementation explicitly pads and slices the frame.
+  padded=np.pad(image,((border,border+tile),(border,border+tile),(0,0)),mode='edge')
+  for y in range(0,height,stride):
+   for x in range(0,width,stride):
+    patch=padded[y:y+tile,x:x+tile].transpose(2,0,1)[None].astype(dtype)
+    output=session.run(None,{session.get_inputs()[0].name:patch})[0][0].transpose(1,2,0).astype(np.float32)
+    rows=min(stride,height-y)*scale;cols=min(stride,width-x)*scale
+    expected[y*scale:y*scale+rows,x*scale:x*scale+cols]=output[border*scale:border*scale+rows,border*scale:border*scale+cols]
+ error=np.max(abs(actual-expected));print('max absolute error',error,'finite',np.isfinite(actual).all(),flush=True);assert error<1e-6
+# Wrong scale must fail rather than publish an incorrectly shaped texture.
+r=subprocess.run([str(args.runner.resolve()),str(root/'nearest-test.onnx'),'4','32','8','67','3',str(root/'model-input.f32'),str(root/'bad-output.f32')],capture_output=True,text=True);assert r.returncode==1;print('mismatched output scale rejected:',r.stderr.strip(),flush=True)

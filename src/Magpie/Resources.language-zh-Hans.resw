@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1134,5 +1134,14 @@
   </data>
   <data name="Root_ProfileFlyout_DeleteConfirmationText" xml:space="preserve">
     <value>确定删除“{}”？</value>
+  </data>
+  <data name="ScalingModes_RecommendedEffects" xml:space="preserve">
+    <value>推荐模型</value>
+  </data>
+  <data name="ScalingModes_OtherEffects" xml:space="preserve">
+    <value>非推荐模型</value>
+  </data>
+  <data name="Message_ModelInitializationFailed" xml:space="preserve">
+    <value>无法加载超分辨率模型。请安装对应的模型文件，并确认所选显卡支持 DirectML。具体原因请查看日志。</value>
   </data>
 </root>

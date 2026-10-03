@@ -1,5 +1,6 @@
 #pragma once
 #include "SmallVector.h"
+#include "OnnxModelDesc.h"
 #include <d3dcommon.h>
 #include <variant>
 
@@ -107,6 +108,8 @@ struct EffectDesc {
 	std::vector<EffectPassDesc> passes;
 
 	uint32_t flags = 0;	// EffectFlags
+	// Empty for shader effects. ONNX descriptors bypass the shader cache.
+	OnnxModelDesc onnx;
 };
 
 }

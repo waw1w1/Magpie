@@ -1,0 +1,46 @@
+{
+  "models": [
+    {
+      "id": "AnimeSharpV4",
+      "name": "AnimeSharpV4",
+      "file": "2x-AnimeSharpV4_RCAN_fp16_op17.onnx",
+      "scale": 2,
+      "tileSize": 128,
+      "overlap": 32,
+      "author": "Kim2091",
+      "license": "CC-BY-NC-SA-4.0",
+      "source": "https://github.com/Kim2091/Kim2091-Models/releases/tag/2x-AnimeSharpV4",
+      "url": "https://github.com/Kim2091/Kim2091-Models/releases/download/2x-AnimeSharpV4/2x-AnimeSharpV4_RCAN_fp16_op17.onnx",
+      "sha256": "75af72e9a5bcb3bd948f5f41b177998a65309f4cb10ff3eb6e5b917de1f25f47"
+    },
+    {
+      "id": "AnimeSharpV4-Fast",
+      "name": "AnimeSharpV4-Fast",
+      "file": "2x-AnimeSharpV4_Fast_RCAN_PU_fp16_opset17.onnx",
+      "scale": 2,
+      "tileSize": 128,
+      "overlap": 32,
+      "author": "Kim2091",
+      "license": "CC-BY-NC-SA-4.0",
+      "source": "https://github.com/Kim2091/Kim2091-Models/releases/tag/2x-AnimeSharpV4",
+      "url": "https://github.com/Kim2091/Kim2091-Models/releases/download/2x-AnimeSharpV4/2x-AnimeSharpV4_Fast_RCAN_PU_fp16_opset17.onnx",
+      "sha256": "cfdf4a3e1200d7c13669fa4df301e7ce06bdb2a3cdbb4bda5858cd4bbe995056"
+    },
+    {
+      "id": "IllustrationJaNai-DAT2",
+      "name": "IllustrationJaNai V1 DAT2",
+      "file": "IllustrationJaNai-DAT2.onnx",
+      "scale": 4,
+      "tileSize": 128,
+      "overlap": 32,
+      "author": "the-database",
+      "license": "CC-BY-NC-SA-4.0",
+      "source": "https://openmodeldb.info/models/4x-IllustrationJaNai-V1-DAT2",
+      "driveId": "1qpioSqBkB_IkSBhEAewSSNFt6qgkBimP",
+      "archiveSha256": "1c94cfc17a8dd678db61ccb23e2e18d893541d4faaf7393c18502b39dc575003",
+      "checkpoint": "4x_IllustrationJaNai_V1_DAT2_190k.pth",
+      "checkpointSha256": "a82f3a2d8d1c676171b86a00048b7a624e3c62c87ec701012f106a171c309fbe",
+      "archiveMember": "4x_IllustrationJaNai_V1_ModelsOnly/4x_IllustrationJaNai_V1_DAT2_190k.pth"
+    }
+  ]
+}

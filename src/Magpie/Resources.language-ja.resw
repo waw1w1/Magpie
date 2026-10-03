@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1134,5 +1134,14 @@
   </data>
   <data name="Root_ProfileFlyout_DeleteConfirmationText" xml:space="preserve">
     <value>"{}" を削除しますか？</value>
+  </data>
+  <data name="ScalingModes_RecommendedEffects" xml:space="preserve">
+    <value>推奨モデル</value>
+  </data>
+  <data name="ScalingModes_OtherEffects" xml:space="preserve">
+    <value>非推奨モデル</value>
+  </data>
+  <data name="Message_ModelInitializationFailed" xml:space="preserve">
+    <value>超解像モデルを読み込めません。対応するモデルファイルをインストールし、選択した GPU が DirectML に対応していることを確認してください。詳細はログを参照してください。</value>
   </data>
 </root>

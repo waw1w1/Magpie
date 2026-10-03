@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MagpieOrtRoot>$(MSBuildThisFileDirectory)..\packages\Microsoft.ML.OnnxRuntime.DirectML.1.24.4</MagpieOrtRoot>
+    <MagpieDmlRoot>$(MSBuildThisFileDirectory)..\packages\Microsoft.AI.DirectML.1.15.4</MagpieDmlRoot>
+    <MagpieOrtArch Condition="'$(Platform)' == 'x64'">x64</MagpieOrtArch>
+    <MagpieOrtArch Condition="'$(Platform)' == 'ARM64'">arm64</MagpieOrtArch>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MagpieOrtRoot)\build\native\include;$(MagpieDmlRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>$(MagpieOrtRoot)\runtimes\win-$(MagpieOrtArch)\native\onnxruntime.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(ConfigurationType)' == 'Application'">
+    <Content Include="$(MagpieOrtRoot)\runtimes\win-$(MagpieOrtArch)\native\onnxruntime.dll;$(MagpieOrtRoot)\runtimes\win-$(MagpieOrtArch)\native\onnxruntime_providers_shared.dll;$(MagpieDmlRoot)\bin\$(MagpieOrtArch)-win\DirectML.dll">
+      <Link>%(Filename)%(Extension)</Link>
+      <DeploymentContent>true</DeploymentContent>
+    </Content>
+  </ItemGroup>
+  <Target Name="CheckMagpieOnnxRuntime" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(MagpieOrtArch)' == ''" Text="Magpie's ONNX backend requires x64 or ARM64." />
+    <Error Condition="!Exists('$(MagpieOrtRoot)\build\native\include\onnxruntime_cxx_api.h') Or !Exists('$(MagpieDmlRoot)\include\DirectML.h')" Text="Restore the ONNX Runtime DirectML and DirectML NuGet packages before building." />
+  </Target>
+  <Target Name="CopyMagpieOnnxRuntime" AfterTargets="Build" Condition="'$(ConfigurationType)' == 'Application'">
+    <ItemGroup>
+      <_MagpieOnnxDll Include="$(MagpieOrtRoot)\runtimes\win-$(MagpieOrtArch)\native\onnxruntime.dll" />
+      <_MagpieOnnxDll Include="$(MagpieOrtRoot)\runtimes\win-$(MagpieOrtArch)\native\onnxruntime_providers_shared.dll" />
+      <_MagpieOnnxDll Include="$(MagpieDmlRoot)\bin\$(MagpieOrtArch)-win\DirectML.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_MagpieOnnxDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

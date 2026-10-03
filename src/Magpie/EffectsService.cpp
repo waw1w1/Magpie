@@ -39,11 +39,13 @@ static void ListEffects(std::vector<std::wstring>& result, std::wstring_view pre
 			continue;
 		}
 
-		if (!fileName.ends_with(L".hlsl")) {
+		const size_t extensionSize = fileName.ends_with(L".onnx.json") ? 10 :
+			(fileName.ends_with(L".hlsl") ? 5 : 0);
+		if (!extensionSize) {
 			continue;
 		}
 
-		result.emplace_back(StrHelper::Concat(prefix, fileName.substr(0, fileName.size() - 5)));
+		result.emplace_back(StrHelper::Concat(prefix, fileName.substr(0, fileName.size() - extensionSize)));
 	} while (FindNextFile(hFind.get(), &findData));
 }
 

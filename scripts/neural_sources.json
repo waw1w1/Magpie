@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "effect": "ACNet2/ACNet-F8B4",
+      "family": "acnet",
+      "repository": "TianZerL/ACNetGLSL",
+      "commit": "c7d2d8dbb5364c550e5bfb738860fc9bcc0ea424",
+      "source": "glsl/acnet/acnet_f8b4.glsl",
+      "sha256": "cd7bd35d2f124f9697b2a1bc82586a395f5f91fba2cedc57a1845853c9af8714",
+      "license_text": "MIT License\n\nCopyright (c) 2020 TianZer\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+    },
+    {
+      "effect": "ACNet2/ACNet-F8B8",
+      "family": "acnet",
+      "repository": "TianZerL/ACNetGLSL",
+      "commit": "c7d2d8dbb5364c550e5bfb738860fc9bcc0ea424",
+      "source": "glsl/acnet/acnet_f8b8.glsl",
+      "sha256": "619ec147e5d679d806567af1f783f77f22b60066ea866cbab731c94ff1a2c885",
+      "license_text": "MIT License\n\nCopyright (c) 2020 TianZer\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+    },
+    {
+      "effect": "ARNet/ARNet-F8B8",
+      "family": "acnet",
+      "repository": "TianZerL/ACNetGLSL",
+      "commit": "c7d2d8dbb5364c550e5bfb738860fc9bcc0ea424",
+      "source": "glsl/arnet/arnet_f8b8.glsl",
+      "sha256": "c36374511bb5b14dc08824a41ce271a1e2a9cb50085f98814c7f83c541fda90c",
+      "license_text": "MIT License\n\nCopyright (c) 2020 TianZer\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+    },
+    {
+      "effect": "ArtCNN/ArtCNN-C4F16",
+      "family": "artcnn",
+      "repository": "Artoriuz/ArtCNN",
+      "commit": "7d6955141b88047a983e3a424e87c5a5e3df3e3c",
+      "source": "GLSL/ArtCNN_C4F16.glsl",
+      "sha256": "03d0b3d31cb82c898a94a46663021a3e8f02c5a21d69c5cfdf0208de4bfd453e",
+      "license_text": "MIT License\n\nCopyright (c) 2024 Joao Chrisostomo, Kacper Michajłow\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+    },
+    {
+      "effect": "ArtCNN/ArtCNN-C4F32",
+      "family": "artcnn",
+      "repository": "Artoriuz/ArtCNN",
+      "commit": "7d6955141b88047a983e3a424e87c5a5e3df3e3c",
+      "source": "GLSL/ArtCNN_C4F32.glsl",
+      "sha256": "f773bce6cf5fe7e5e5d599a695edd40df5cd7a20c3d08c4d164d07591d5bead3",
+      "license_text": "MIT License\n\nCopyright (c) 2024 Joao Chrisostomo, Kacper Michajłow\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE."
+    }
+  ],
+  "references": [
+    {
+      "family": "ArtCNN",
+      "repository": "Artoriuz/ArtCNN",
+      "commit": "7d6955141b88047a983e3a424e87c5a5e3df3e3c",
+      "source": "ONNX/ArtCNN_C4F16.onnx",
+      "sha256": "7a6436299b8c757dbb7084ac39a25c310db1941133e73d1ee3e74c8b3bddc1ca"
+    },
+    {
+      "family": "ArtCNN",
+      "repository": "Artoriuz/ArtCNN",
+      "commit": "7d6955141b88047a983e3a424e87c5a5e3df3e3c",
+      "source": "ONNX/ArtCNN_C4F32.onnx",
+      "sha256": "b1a1130469a0538d4484fc3d6ca39854ef3906a3a01df8799997b6ed0408f6ea"
+    }
+  ]
+}

@@ -78,6 +78,18 @@ bool EffectDrawer::Initialize(
 		Logger::Get().Error("创建输出纹理失败");
 		return false;
 	}
+	if (!desc.onnx.file.empty()) {
+		try {
+			_onnx = std::make_unique<OnnxEffectDrawer>(desc, deviceResources);
+			_onnx->Resize(_textures[0].get(), _textures[1].get());
+			return true;
+		} catch (const std::exception& e) {
+			Logger::Get().Error(fmt::format("ONNX initialization failed: {}", e.what()));
+		} catch (const winrt::hresult_error& e) {
+			Logger::Get().ComError("ONNX initialization failed", e.code());
+		}
+		return false;
+	}
 
 	for (size_t i = 2; i < desc.textures.size(); ++i) {
 		const EffectIntermediateTextureDesc& texDesc = desc.textures[i];
@@ -168,16 +180,24 @@ bool EffectDrawer::Initialize(
 	return true;
 }
 
-void EffectDrawer::Draw(EffectsProfiler& profiler) const noexcept {
+bool EffectDrawer::Draw(EffectsProfiler& profiler) const noexcept {
+	if (_onnx) {
+		const bool success = _onnx->Draw();
+		profiler.OnEndPass(_d3dDC);
+		return success;
+	}
 	_PrepareForDraw();
 
 	for (uint32_t i = 0; i < _dispatches.size(); ++i) {
 		_DrawPass(i);
 		profiler.OnEndPass(_d3dDC);
 	}
+	return true;
 }
 
 void EffectDrawer::DrawForExport(const EffectDesc& desc, uint32_t passIdx) const noexcept {
+	// The current output already contains the model result; no hidden rerun.
+	if (_onnx) return;
 	_PrepareForDraw();
 
 	for (uint32_t i : _CalcPassesToDrawForExport(desc, passIdx)) {
@@ -234,6 +254,18 @@ bool EffectDrawer::ResizeTextures(
 	}
 
 	*inOutTexture = _textures[1].get();
+	if (_onnx) {
+		if (!anyChange) return true;
+		try {
+			_onnx->Resize(_textures[0].get(), _textures[1].get());
+			return true;
+		} catch (const std::exception& e) {
+			Logger::Get().Error(fmt::format("ONNX resize failed: {}", e.what()));
+		} catch (const winrt::hresult_error& e) {
+			Logger::Get().ComError("ONNX resize failed", e.code());
+		}
+		return false;
+	}
 
 	for (size_t i = 2; i < _textures.size(); ++i) {
 		const std::pair<std::string, std::string>& sizeExpr = desc.textures[i].sizeExpr;

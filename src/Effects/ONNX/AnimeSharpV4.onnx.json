@@ -1,0 +1,12 @@
+{
+  "name": "AnimeSharpV4",
+  "file": "2x-AnimeSharpV4_RCAN_fp16_op17.onnx",
+  "scale": 2,
+  "tileSize": 128,
+  "overlap": 32,
+  "author": "Kim2091",
+  "license": "CC-BY-NC-SA-4.0",
+  "source": "https://github.com/Kim2091/Kim2091-Models/releases/tag/2x-AnimeSharpV4",
+  "version": 1,
+  "sha256": "75af72e9a5bcb3bd948f5f41b177998a65309f4cb10ff3eb6e5b917de1f25f47"
+}

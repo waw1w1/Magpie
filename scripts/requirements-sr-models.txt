@@ -1,0 +1,9 @@
+# Python 3.12; PyTorch CPU wheels can use https://download.pytorch.org/whl/cpu
+numpy==2.5.2
+onnx==1.23.1
+onnxruntime==1.30.0
+torch==2.14.1
+torchvision==0.29.1
+spandrel==0.4.2
+safetensors==0.8.0
+gdown==6.4.1

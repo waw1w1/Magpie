@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "OnnxEffectDrawer.h"
 #include "EffectCompiler.h"
 #include "CommonSharedConstants.h"
 #include "DirectXHelper.h"
@@ -1606,6 +1607,8 @@ uint32_t EffectCompiler::Compile(
 	const phmap::flat_hash_map<std::string, float>* inlineParams
 ) noexcept {
 	bool noCompile = bool(flags & EffectCompilerFlags::NoCompile);
+	const int onnx = OnnxEffectDrawer::ReadDesc(desc);
+	if (onnx != 0) return onnx == 1 ? 0 : 1;
 	bool noCache = noCompile || bool(flags & EffectCompilerFlags::NoCache);
 
 	if (bool(flags & EffectCompilerFlags::InlineParams)) {

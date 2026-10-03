@@ -41,7 +41,13 @@
       <ObjectFileOutput />
     </FxCompile>
   </ItemDefinitionGroup>
+  <Import Project="..\OnnxRuntime.props" />
   <ItemGroup>
+    <ClInclude Include="include\OnnxModelDesc.h" />
+    <ClInclude Include="OnnxModelRunner.h" />
+    <ClInclude Include="OnnxEffectDrawer.h" />
+    <ClCompile Include="OnnxModelRunner.cpp" />
+    <ClCompile Include="OnnxEffectDrawer.cpp" />
     <ClInclude Include="include\AppXReader.h" />
     <ClInclude Include="include\ScreenshotFilenameTemplateHelper.h" />
     <ClInclude Include="KeepScreenOnHelper.h" />

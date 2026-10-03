@@ -146,6 +146,7 @@
       <DependentUpon>EffectParametersViewModel.idl</DependentUpon>
       <SubType>Code</SubType>
     </ClInclude>
+    <ClInclude Include="RecommendedEffects.h" />
     <ClInclude Include="EffectsService.h" />
     <ClInclude Include="FileDialogHelper.h" />
     <ClInclude Include="HomeViewModel.h">
@@ -733,6 +734,7 @@
       <Project>{0e5205ae-dfa9-4cb8-b662-e43cd6512e2a}</Project>
     </ProjectReference>
   </ItemGroup>
+  <Import Project="..\OnnxRuntime.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <!-- 导入 Microsoft.AppXPackage.Targets 以生成 pri，应在 Microsoft.Cpp.targets 之后 -->
   <Import Project="$(MsAppxPackageTargets)" />

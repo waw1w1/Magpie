@@ -350,7 +350,11 @@ bool Renderer::OnResize() noexcept {
 		_sharedTextureMutexKey.store(0, std::memory_order_relaxed);
 
 		// 渲染完成再通知前端防止黑屏。前端会自动执行渲染，因此无需发送 WM_FRONTEND_RENDER
-		_BackendRender(outputTexture);
+		if (!_BackendRender(outputTexture)) {
+			_sharedTextureHandle.store(INVALID_HANDLE_VALUE, std::memory_order_release);
+			_sharedTextureHandle.notify_one();
+			return;
+		}
 
 		_sharedTextureHandle.store(sharedHandle, std::memory_order_release);
 		_sharedTextureHandle.notify_one();
@@ -497,12 +501,12 @@ static std::optional<EffectDesc> CompileEffect(
 	});
 
 	if (success) {
-		Logger::Get().Info(fmt::format("编译 {}.hlsl 用时 {} 毫秒",
+		Logger::Get().Info(fmt::format("准备效果 {} 用时 {} 毫秒",
 			effectOption.name, duration / 1000.0f));
 		return result;
 	} else {
 		Logger::Get().Error(StrHelper::Concat("编译 ",
-			effectOption.name, ".hlsl 失败"));
+			effectOption.name, " 失败"));
 		return std::nullopt;
 	}
 }
@@ -553,6 +557,7 @@ ID3D11Texture2D* Renderer::_BuildEffects() noexcept {
 			&inOutTexture
 		)) {
 			Logger::Get().Error(fmt::format("初始化效果#{} ({}) 失败", i, effects[i].name));
+			if (!_effectDescs[i].onnx.file.empty()) _backendInitError = ScalingError::ModelInitializationFailed;
 			return nullptr;
 		}
 
@@ -888,7 +893,17 @@ void Renderer::_BackendThreadProc() noexcept {
 			// 强制帧
 			[[fallthrough]];
 		case FrameSourceState::NewFrame:
-			_BackendRender(_effectDrawers.back().GetOutputTexture());
+			if (!_BackendRender(_effectDrawers.back().GetOutputTexture())) {
+				const uint32_t runId = ScalingWindow::RunId();
+				ScalingWindow::Dispatcher().TryEnqueue([runId]() {
+					if (ScalingWindow::RunId() != runId) return;
+					auto& window = ScalingWindow::Get();
+					window.ShowError(ScalingError::ScalingFailedGeneral);
+					window.Stop();
+				});
+				while (GetMessage(&msg, NULL, 0, 0) > 0) DispatchMessage(&msg);
+				return;
+			}
 			// 通知前端执行渲染
 			PostMessage(ScalingWindow::Get().Handle(),
 				CommonSharedConstants::WM_FRONTEND_RENDER, 0, 0);
@@ -1008,7 +1023,7 @@ HANDLE Renderer::_InitBackend() noexcept {
 	return sharedHandle;
 }
 
-void Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
+bool Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 	_stepTimer.PrepareForRender();
 
 	ID3D11DeviceContext4* d3dDC = _backendResources.GetD3DDC();
@@ -1022,7 +1037,10 @@ void Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 	_effectsProfiler.OnBeginEffects(d3dDC);
 
 	for (const EffectDrawer& effectDrawer : _effectDrawers) {
-		effectDrawer.Draw(_effectsProfiler);
+		if (!effectDrawer.Draw(_effectsProfiler)) {
+			_effectsProfiler.OnEndEffects(d3dDC);
+			return false;
+		}
 	}
 
 	_effectsProfiler.OnEndEffects(d3dDC);
@@ -1030,13 +1048,13 @@ void Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 	HRESULT hr = d3dDC->Signal(_d3dFence.get(), ++_fenceValue);
 	if (FAILED(hr)) {
 		Logger::Get().ComError("Signal 失败", hr);
-		return;
+		return false;
 	}
 
 	hr = _d3dFence->SetEventOnCompletion(_fenceValue, _fenceEvent.get());
 	if (FAILED(hr)) {
 		Logger::Get().ComError("SetEventOnCompletion 失败", hr);
-		return;
+		return false;
 	}
 
 	d3dDC->Flush();
@@ -1052,7 +1070,7 @@ void Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 	hr = _backendSharedTextureMutex->AcquireSync(key - 1, INFINITE);
 	if (FAILED(hr)) {
 		Logger::Get().ComError("AcquireSync 失败", hr);
-		return;
+		return false;
 	}
 
 	d3dDC->CopyResource(_backendSharedTexture.get(), effectsOutput);
@@ -1062,6 +1080,7 @@ void Renderer::_BackendRender(ID3D11Texture2D* effectsOutput) noexcept {
 	// 根据 https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11device-opensharedresource，
 	// 更新共享纹理后必须调用 Flush
 	d3dDC->Flush();
+	return true;
 }
 
 bool Renderer::_UpdateDynamicConstants() const noexcept {

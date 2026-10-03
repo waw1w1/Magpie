@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1134,5 +1134,14 @@
   </data>
   <data name="Root_ProfileFlyout_DeleteConfirmationText" xml:space="preserve">
     <value>確定刪除「{}」？</value>
+  </data>
+  <data name="ScalingModes_RecommendedEffects" xml:space="preserve">
+    <value>推薦模型</value>
+  </data>
+  <data name="ScalingModes_OtherEffects" xml:space="preserve">
+    <value>非推薦模型</value>
+  </data>
+  <data name="Message_ModelInitializationFailed" xml:space="preserve">
+    <value>無法載入超解析度模型。請安裝對應的模型檔案，並確認所選顯示卡支援 DirectML。詳細原因請查看記錄。</value>
   </data>
 </root>

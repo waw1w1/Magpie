@@ -1,6 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <CopyFileToFolders Include="ONNX\DirectML-ThirdPartyNotices.txt" />
+    <CopyFileToFolders Include="ONNX\DirectML-LICENSE.txt" />
+    <CopyFileToFolders Include="ONNX\ONNXRuntime-ThirdPartyNotices.txt" />
+    <CopyFileToFolders Include="ONNX\ONNXRuntime-LICENSE.txt" />
+    <CopyFileToFolders Include="LeRF\LICENSE.txt" />
+    <CopyFileToFolders Include="LeRF\LeRF-G.dds" />
+    <CopyFileToFolders Include="LeRF\LeRF-G.hlsl" />
+    <CopyFileToFolders Include="LeRF\LeRF-L.dds" />
+    <CopyFileToFolders Include="LeRF\LeRF-L.hlsl" />
+    <CopyFileToFolders Include="LeRF\LeRFCommon.hlsli" />
+    <CopyFileToFolders Include="ONNX\AnimeSharpV4-Fast.onnx.json" />
+    <CopyFileToFolders Include="ONNX\AnimeSharpV4.onnx.json" />
+    <CopyFileToFolders Include="ONNX\IllustrationJaNai-DAT2.onnx.json" />
+    <CopyFileToFolders Include="ONNX\LICENSE-CC-BY-NC-SA-4.0.txt" />
+    <CopyFileToFolders Include="ONNX\README.txt" />
+    <CopyFileToFolders Include="ACNet2\ACNet-F8B8.hlsl" />
+    <CopyFileToFolders Include="ACNet2\ACNet-F8B4.hlsl" />
+    <CopyFileToFolders Include="ARNet\ARNet-F8B8.hlsl" />
+    <CopyFileToFolders Include="ArtCNN\ArtCNN-C4F16.hlsl" />
+    <CopyFileToFolders Include="ArtCNN\ArtCNN-C4F32.hlsl" />
+
     <CopyFileToFolders Include="ACNet.hlsl" />
     <CopyFileToFolders Include="Jinc.hlsl" />
     <CopyFileToFolders Include="Lanczos.hlsl" />

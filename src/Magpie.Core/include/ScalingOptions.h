@@ -147,7 +147,8 @@ enum class ScalingError {
 	// FrameSource 初始化失败
 	CaptureFailed,
 	// ID3D11Device5::CreateFence 失败
-	CreateFenceFailed
+	CreateFenceFailed,
+	ModelInitializationFailed
 };
 
 enum class ScalingFlags {

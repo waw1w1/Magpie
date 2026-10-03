@@ -1,5 +1,6 @@
 #pragma once
 #include "EffectDesc.h"
+#include "OnnxEffectDrawer.h"
 #include "SmallVector.h"
 // Conan 的 muparser 不含 UNICODE 支持
 #pragma push_macro("_UNICODE")
@@ -31,7 +32,7 @@ public:
 		ID3D11Texture2D** inOutTexture
 	) noexcept;
 
-	void Draw(EffectsProfiler& profiler) const noexcept;
+	bool Draw(EffectsProfiler& profiler) const noexcept;
 
 	void DrawForExport(const EffectDesc& desc, uint32_t passIdx) const noexcept;
 
@@ -51,6 +52,7 @@ public:
 	}
 
 private:
+	std::unique_ptr<OnnxEffectDrawer> _onnx;
 	SIZE _CalcOutputSize(
 		const EffectDesc& desc,
 		const EffectOption& option,

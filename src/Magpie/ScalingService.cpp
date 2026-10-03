@@ -188,6 +188,9 @@ static void ShowError(HWND hWnd, ScalingError error) noexcept {
 	case ScalingError::CreateFenceFailed:
 		key = L"Message_CreateFenceFailed";
 		break;
+	case ScalingError::ModelInitializationFailed:
+		key = L"Message_ModelInitializationFailed";
+		break;
 	default:
 		assert(false);
 		return;

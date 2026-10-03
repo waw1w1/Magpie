@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1134,5 +1134,14 @@
   </data>
   <data name="Root_ProfileFlyout_DeleteConfirmationText" xml:space="preserve">
     <value>Are you sure you want to delete "{}"?</value>
+  </data>
+  <data name="ScalingModes_RecommendedEffects" xml:space="preserve">
+    <value>Recommended models</value>
+  </data>
+  <data name="ScalingModes_OtherEffects" xml:space="preserve">
+    <value>Non-recommended models</value>
+  </data>
+  <data name="Message_ModelInitializationFailed" xml:space="preserve">
+    <value>Could not load the SR model. Install the matching model files and confirm that the selected GPU supports DirectML. See the log for details.</value>
   </data>
 </root>
