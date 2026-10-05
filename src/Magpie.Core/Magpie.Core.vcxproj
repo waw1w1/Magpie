@@ -46,9 +46,15 @@
     <ClInclude Include="include\OnnxModelDesc.h" />
     <ClInclude Include="OnnxModelRunner.h" />
     <ClInclude Include="OnnxInferenceWorker.h" />
-    <ClCompile Include="OnnxInferenceWorker.cpp" />
+    <!-- Keep these sources portable while including the Windows PCH before
+         MSVC starts parsing their conditional compilation directives. -->
+    <ClCompile Include="OnnxInferenceWorker.cpp">
+      <ForcedIncludeFiles>pch.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
     <ClInclude Include="OnnxEffectDrawer.h" />
-    <ClCompile Include="OnnxModelRunner.cpp" />
+    <ClCompile Include="OnnxModelRunner.cpp">
+      <ForcedIncludeFiles>pch.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="OnnxEffectDrawer.cpp" />
     <ClInclude Include="include\AppXReader.h" />
     <ClInclude Include="include\ScreenshotFilenameTemplateHelper.h" />
@@ -56,6 +62,7 @@
     <ClInclude Include="BackendDescriptorStore.h" />
     <ClInclude Include="CompSwapchainPresenter.h" />
     <ClInclude Include="CursorManager.h" />
+    <ClInclude Include="RemoteCursor.h" />
     <ClInclude Include="CursorDrawer.h" />
     <ClInclude Include="DDS.h" />
     <ClInclude Include="DDSHelper.h" />
@@ -102,6 +109,7 @@
     <ClCompile Include="BackendDescriptorStore.cpp" />
     <ClCompile Include="CompSwapchainPresenter.cpp" />
     <ClCompile Include="CursorManager.cpp" />
+    <ClCompile Include="RemoteCursor.cpp" />
     <ClCompile Include="CursorDrawer.cpp" />
     <ClCompile Include="DDSHelper.cpp" />
     <ClCompile Include="DesktopDuplicationFrameSource.cpp" />

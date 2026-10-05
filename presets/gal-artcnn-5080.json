@@ -1,0 +1,41 @@
+{
+  "scalingModes": [
+    {
+      "name": "燃烧5080 · 4K均衡（720p／900p）",
+      "effects": [
+        {
+          "name": "ArtCNN\\ArtCNN-C4F32",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "ArtCNN\\ArtCNN-C4F16",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "SSimDownscaler",
+          "scalingType": 1,
+          "scale": { "x": 1.0, "y": 1.0 },
+          "parameters": { "oversharp": 1.0 }
+        }
+      ]
+    },
+    {
+      "name": "燃烧5080 · 4K直出（1080p）",
+      "effects": [
+        {
+          "name": "ArtCNN\\ArtCNN-C4F32",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "Lanczos",
+          "scalingType": 1,
+          "scale": { "x": 1.0, "y": 1.0 },
+          "parameters": { "ARStrength": 0.75 }
+        }
+      ]
+    }
+  ]
+}

@@ -1,27 +1,152 @@
-#ifdef _WIN32
-#include "pch.h"
-#endif
 #include "OnnxModelRunner.h"
 #include <onnxruntime_cxx_api.h>
 #ifdef _WIN32
 #include <dml_provider_factory.h>
+#include <windows.h>
 #endif
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <mutex>
 #include <stdexcept>
+#include <string_view>
 
 namespace Magpie {
 
+struct OnnxEnvironment {
+	Ort::Env env{ ORT_LOGGING_LEVEL_WARNING, "Magpie" };
+	std::once_flag rtxRegistration;
+};
+
+static std::shared_ptr<OnnxEnvironment> AcquireEnvironment() {
+	static std::mutex mutex;
+	static std::weak_ptr<OnnxEnvironment> existing;
+	std::lock_guard lock(mutex);
+	auto runtime = existing.lock();
+	if (!runtime) {
+		runtime = std::make_shared<OnnxEnvironment>();
+		existing = runtime;
+	}
+	return runtime;
+}
+
+#ifdef _WIN32
+static std::filesystem::path ApplicationDirectory() {
+	std::wstring buffer(32768, L'\0');
+	const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+	if (!length || length == buffer.size()) throw std::runtime_error("Cannot locate the application directory");
+	buffer.resize(length);
+	return std::filesystem::path(buffer).parent_path();
+}
+
+static std::filesystem::path AddTensorRtRtx(OnnxEnvironment& runtime, Ort::SessionOptions& options,
+	int adapterIndex, const std::string& modelHash) {
+	auto& env = runtime.env;
+	const auto directory = ApplicationDirectory();
+	const auto library = directory / L"onnxruntime_providers_nv_tensorrt_rtx.dll";
+	if (!std::filesystem::exists(library)) {
+		throw std::runtime_error("TensorRT RTX runtime missing. Run scripts/install_tensorrt_rtx.py --app-dir <Magpie folder>");
+	}
+	const auto& api = Ort::GetApi();
+	std::call_once(runtime.rtxRegistration, [&] {
+		Ort::ThrowOnError(api.RegisterExecutionProviderLibrary(env, "nv_tensorrt_rtx", library.c_str()));
+	});
+	const OrtEpDevice* const* devices = nullptr;
+	size_t count = 0;
+	Ort::ThrowOnError(api.GetEpDevices(env, &devices, &count));
+	const OrtEpDevice* selected = nullptr;
+	const auto index = std::to_string(adapterIndex);
+	for (size_t i = 0; i < count; ++i) {
+		if (std::string_view(api.EpDevice_EpName(devices[i])) != "nv_tensorrt_rtx") continue;
+		const auto hardware = api.EpDevice_Device(devices[i]);
+		const auto metadata = api.HardwareDevice_Metadata(hardware);
+		const char* dxgiIndex = api.GetKeyValue(metadata, "DxgiAdapterNumber");
+		if (api.HardwareDevice_VendorId(hardware) == 0x10de && dxgiIndex && dxgiIndex == index) {
+			selected = devices[i];
+			break;
+		}
+	}
+	if (!selected) throw std::runtime_error("TensorRT RTX requires a supported NVIDIA GPU matching Magpie's selected adapter");
+	// Quantized operators must never silently move to the CPU.
+	options.AddConfigEntry("session.disable_cpu_ep_fallback", "1");
+	// ORT 1.24 Q/DQ rewrites can break TensorRT RTX's FP8/BF16 scale operands.
+	// Let TensorRT perform graph optimization on the validated ONNX graph.
+	options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_DISABLE_ALL);
+	const char* keys[] = { "enable_cuda_graph", "nv_runtime_cache_path" };
+	std::string cache;
+	std::filesystem::path cacheDirectory;
+	std::wstring localAppData(32768, L'\0');
+	const DWORD length = GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData.data(),
+		static_cast<DWORD>(localAppData.size()));
+	if (length && length < localAppData.size() && modelHash.size() == 64 &&
+		modelHash.find_first_not_of("0123456789abcdef") == std::string::npos) {
+		localAppData.resize(length);
+		const auto path = std::filesystem::path(localAppData) / L"Magpie" / L"cache" / L"TensorRT" / modelHash;
+		std::error_code error;
+		std::filesystem::create_directories(path, error);
+		if (!error) {
+			cacheDirectory = path;
+			const auto utf8 = path.u8string();
+			cache.assign(reinterpret_cast<const char*>(utf8.data()), utf8.size());
+		}
+	}
+	const char* values[] = { "1", cache.c_str() };
+	Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_V2(options, env, &selected, 1,
+		keys, values, cache.empty() ? 1 : 2));
+	return cacheDirectory;
+}
+
+static Ort::Session CreateTensorRtSession(Ort::Env& env, Ort::SessionOptions& options,
+	const std::filesystem::path& model, const std::filesystem::path& cacheDirectory) {
+	if (cacheDirectory.empty()) return Ort::Session(env, model.c_str(), options);
+	// A runtime cache only stores GPU kernels. Preserve the compiled graph too,
+	// otherwise each toggle repeats the expensive ONNX-to-TensorRT compilation.
+	static std::mutex compilationMutex;
+	std::lock_guard lock(compilationMutex);
+	const auto directory = ApplicationDirectory();
+	std::string key = "context-v1-" + std::string(OrtGetApiBase()->GetVersionString());
+	for (const auto* name : { L"onnxruntime_providers_nv_tensorrt_rtx.dll", L"tensorrt_rtx_1_6.dll" }) {
+		key += "-" + std::to_string(std::filesystem::last_write_time(directory / name).time_since_epoch().count());
+	}
+	const auto compiled = cacheDirectory / (key + ".onnx");
+	std::error_code error;
+	if (std::filesystem::exists(compiled, error)) {
+		try {
+			return Ort::Session(env, compiled.c_str(), options);
+		} catch (const Ort::Exception&) {
+			// A damaged or incompatible generated cache is rebuilt from the
+			// checksum-verified source model, with the same strict GPU backend.
+			std::filesystem::remove(compiled, error);
+		}
+	}
+	const auto temporary = cacheDirectory / (key + "." + std::to_string(GetCurrentProcessId()) + ".partial.onnx");
+	try {
+		Ort::ModelCompilationOptions compilation(env, options);
+		compilation.SetInputModelPath(model.c_str());
+		compilation.SetOutputModelPath(temporary.c_str());
+		compilation.SetEpContextEmbedMode(true);
+		compilation.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_DISABLE_ALL);
+		Ort::ThrowOnError(Ort::CompileModel(env, compilation));
+		std::filesystem::rename(temporary, compiled);
+		return Ort::Session(env, compiled.c_str(), options);
+	} catch (...) {
+		std::filesystem::remove(temporary, error);
+		throw;
+	}
+}
+#endif
+
 struct OnnxModelRunner::Impl {
 	OnnxModelDesc desc;
-	Ort::Env env{ ORT_LOGGING_LEVEL_WARNING, "Magpie" };
+	// The environment and its plugin registration outlive every associated session.
+	std::shared_ptr<OnnxEnvironment> runtime = AcquireEnvironment();
 	Ort::Session session{ nullptr };
 	Ort::RunOptions runOptions;
 	std::string inputName, outputName;
 	ONNXTensorElementDataType inputType{}, outputType{};
 
 	Impl(const std::filesystem::path& path, const OnnxModelDesc& config, int dmlDevice) : desc(config) {
+		auto& env = runtime->env;
 		if (desc.scale < 2 || desc.scale > 4 || desc.tileSize < 16 || desc.tileSize > 512 ||
 			desc.overlap >= desc.tileSize / 2) {
 			throw std::invalid_argument("Invalid ONNX scale or tile configuration");
@@ -30,18 +155,30 @@ struct OnnxModelRunner::Impl {
 		options.SetExecutionMode(ExecutionMode::ORT_SEQUENTIAL);
 		options.DisableMemPattern();
 #ifdef _WIN32
-		if (dmlDevice < 0) throw std::invalid_argument("A DirectML adapter is required");
-		const OrtDmlApi* dml = nullptr;
-		Ort::ThrowOnError(Ort::GetApi().GetExecutionProviderApi("DML", ORT_API_VERSION,
-			reinterpret_cast<const void**>(&dml)));
-		Ort::ThrowOnError(dml->SessionOptionsAppendExecutionProvider_DML(options, dmlDevice));
-		// ORT may place shape/control operators on CPU. A failed DML provider
-		// initialization is an error; it never silently selects another adapter.
+		if (dmlDevice < 0) throw std::invalid_argument("A GPU adapter is required");
+		std::filesystem::path rtxCache;
+		if (desc.backend == OnnxBackend::TensorRtRtx) {
+			rtxCache = AddTensorRtRtx(*runtime, options, dmlDevice, desc.sha256);
+		} else {
+			const OrtDmlApi* dml = nullptr;
+			Ort::ThrowOnError(Ort::GetApi().GetExecutionProviderApi("DML", ORT_API_VERSION,
+				reinterpret_cast<const void**>(&dml)));
+			Ort::ThrowOnError(dml->SessionOptionsAppendExecutionProvider_DML(options, dmlDevice));
+			// Shape/control operators may use CPU; failed DML initialization is an error.
+		}
 #else
+		if (desc.backend != OnnxBackend::DirectML) throw std::invalid_argument("This TensorRT RTX integration requires Windows");
 		if (dmlDevice >= 0) throw std::invalid_argument("DirectML requires Windows");
 		options.SetIntraOpNumThreads(2);
 #endif
-		session = Ort::Session(env, path.c_str(), options);
+#ifdef _WIN32
+		if (desc.backend == OnnxBackend::TensorRtRtx) {
+			session = CreateTensorRtSession(env, options, path, rtxCache);
+		} else
+#endif
+		{
+			session = Ort::Session(env, path.c_str(), options);
+		}
 		if (session.GetInputCount() != 1 || session.GetOutputCount() != 1) {
 			throw std::runtime_error("Model must have exactly one RGB input and output");
 		}
@@ -59,7 +196,7 @@ struct OnnxModelRunner::Impl {
 			return type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT || type == ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16;
 		};
 		if (!supported(inputType) || !supported(outputType)) {
-			throw std::runtime_error("Only FP32/FP16 models are supported");
+			throw std::runtime_error("Model inputs and outputs must use FP32 or FP16");
 		}
 		auto validate = [](const std::vector<int64_t>& shape, int64_t size) {
 			return shape.size() == 4 && (shape[0] == 1 || shape[0] == -1) && shape[1] == 3 &&

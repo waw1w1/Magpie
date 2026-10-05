@@ -1,0 +1,8 @@
+# CUDA-enabled Python 3.12; see src/Effects/ONNX/README.txt.
+torch==2.13.0
+torchvision==0.28.0
+spandrel==0.4.2
+nvidia-modelopt[onnx]==0.47.0
+onnx==1.21.0
+numpy==2.3.5
+pillow==12.3.0

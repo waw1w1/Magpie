@@ -35,6 +35,10 @@ int OnnxEffectDrawer::ReadDesc(EffectDesc& desc) noexcept {
 		};
 		desc.onnx.file = StrHelper::UTF16ToUTF8(json.GetNamedString(L"file"));
 		desc.onnx.sha256 = StrHelper::UTF16ToUTF8(json.GetNamedString(L"sha256"));
+		const auto backend = json.GetNamedString(L"backend", L"directml");
+		if (backend == L"directml") desc.onnx.backend = OnnxBackend::DirectML;
+		else if (backend == L"tensorrt-rtx") desc.onnx.backend = OnnxBackend::TensorRtRtx;
+		else throw std::runtime_error("Unknown ONNX backend");
 		if (desc.onnx.file.empty() || desc.onnx.file.find_first_of("/\\:") != std::string::npos ||
 			!desc.onnx.file.ends_with(".onnx") || desc.onnx.sha256.size() != 64 ||
 			desc.onnx.sha256.find_first_not_of("0123456789abcdef") != std::string::npos) {
@@ -50,7 +54,8 @@ int OnnxEffectDrawer::ReadDesc(EffectDesc& desc) noexcept {
 		desc.textures[0].format = desc.textures[1].format = EffectIntermediateTextureFormat::R8G8B8A8_UNORM;
 		desc.textures[1].sizeExpr = { fmt::format("INPUT_WIDTH * {}", desc.onnx.scale), fmt::format("INPUT_HEIGHT * {}", desc.onnx.scale) };
 		EffectPassDesc pass;
-		pass.desc = desc.sortName + " (DirectML; see log for wall time)";
+		pass.desc = desc.sortName + (desc.onnx.backend == OnnxBackend::DirectML
+			? " (DirectML; see log for wall time)" : " (TensorRT RTX; see log for wall time)");
 		pass.inputs.push_back(0);
 		pass.outputs.push_back(1);
 		desc.passes.push_back(std::move(pass));
@@ -65,7 +70,7 @@ int OnnxEffectDrawer::ReadDesc(EffectDesc& desc) noexcept {
 
 static void VerifyModel(const std::filesystem::path& path, const std::string& expected) {
 	std::ifstream file(path, std::ios::binary | std::ios::ate);
-	if (!file) throw std::runtime_error("Model missing. Run scripts/install_sr_models.py --effects-dir <Magpie>/effects");
+	if (!file) throw std::runtime_error("Model missing. See effects/ONNX/README.txt for installation or FP8 export instructions");
 	const auto size = file.tellg();
 	if (size <= 0 || size > 512 * 1024 * 1024) throw std::runtime_error("Invalid model file size");
 	std::vector<unsigned char> bytes(static_cast<size_t>(size));
@@ -93,7 +98,7 @@ OnnxEffectDrawer::OnnxEffectDrawer(const EffectDesc& desc, DeviceResources& reso
 	for (UINT i = 0;; ++i) {
 		winrt::com_ptr<IDXGIAdapter1> adapter;
 		if (resources.GetDXGIFactory()->EnumAdapters1(i, adapter.put()) == DXGI_ERROR_NOT_FOUND) break;
-		if (!adapter) throw std::runtime_error("Cannot enumerate DirectML adapter");
+		if (!adapter) throw std::runtime_error("Cannot enumerate GPU adapters");
 		DXGI_ADAPTER_DESC1 candidate{};
 		winrt::check_hresult(adapter->GetDesc1(&candidate));
 		if (candidate.AdapterLuid.HighPart == selected.AdapterLuid.HighPart &&
@@ -101,7 +106,10 @@ OnnxEffectDrawer::OnnxEffectDrawer(const EffectDesc& desc, DeviceResources& reso
 			deviceIndex = static_cast<int>(i); break;
 		}
 	}
-	if (deviceIndex < 0) throw std::runtime_error("Cannot match Magpie's adapter to DirectML");
+	if (deviceIndex < 0) throw std::runtime_error("Cannot find Magpie's selected DXGI adapter");
+	Logger::Get().Info(fmt::format("ONNX backend: {}; adapter index: {}; tile: {}; overlap: {}",
+		desc.onnx.backend == OnnxBackend::DirectML ? "DirectML" : "TensorRT RTX",
+		deviceIndex, desc.onnx.tileSize, desc.onnx.overlap));
 	_runner = std::make_unique<OnnxModelRunner>(path, desc.onnx, deviceIndex);
 	winrt::check_hresult(_device->CreateComputeShader(OnnxPreviewCS, sizeof(OnnxPreviewCS), nullptr, _previewShader.put()));
 	_previewSampler = resources.GetSampler(D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP);

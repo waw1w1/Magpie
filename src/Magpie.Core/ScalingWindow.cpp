@@ -1879,7 +1879,7 @@ winrt::fire_and_forget ScalingWindow::_UpdateFocusStateAsync() const noexcept {
 		}
 
 		// 这里搞得很复杂，是我反复实验得到的，若要修改应测试下列情形：
-		// 1. 缩放 WindowCase 中的 TopmostWindow 和 PopupHostWindow
+		// 1. 缩放置顶窗口以及带弹出子窗口的窗口
 		// 2. 缩放常规窗口然后切换到管理员身份的窗口。测试这一条时应直接运行，不要调试，因
 		// 为调试状态下 SetWindowPos 的行为有变化
 		// 3. 缩放时将任意窗口最小化然后还原

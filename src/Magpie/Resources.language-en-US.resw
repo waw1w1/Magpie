@@ -1153,4 +1153,10 @@
   <data name="Overlay_ModelPreview" xml:space="preserve">
     <value>Live preview · SR processing</value>
   </data>
+  <data name="Profile_Cursor_RemoteCursor.Header" xml:space="preserve">
+    <value>Remote cursor compatibility</value>
+  </data>
+  <data name="Profile_Cursor_RemoteCursor.Description" xml:space="preserve">
+    <value>Hide the extra system cursor in remote desktop and streaming software. Takes effect the next time scaling starts.</value>
+  </data>
 </root>

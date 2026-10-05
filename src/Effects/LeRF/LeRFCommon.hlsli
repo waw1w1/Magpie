@@ -39,7 +39,10 @@ float3 Simplex(Texture2D<float4> lut, float4 value, uint table) {
 	}
 	float3 result = (16.0 - fraction[order.x]) * ReadLut(lut, grid, table);
 	[unroll] for (uint k = 0; k < 4; ++k) {
-		grid[order[k]] += 1;
+		// FXC cannot lower a dynamically indexed vector write inside a loop.
+		// Increment the selected component without forcing the caller to unroll.
+		uint axis = order[k];
+		grid += uint4(axis == 0, axis == 1, axis == 2, axis == 3);
 		float next = k < 3 ? fraction[order[min(k + 1, 3)]] : 0.0;
 		result += (fraction[order[k]] - next) * ReadLut(lut, grid, table);
 	}

@@ -43,6 +43,7 @@
     <CopyFileToFolders Include="ARNet\ARNet-F8B8.hlsl" />
     <CopyFileToFolders Include="ArtCNN\ArtCNN-C4F16.hlsl" />
     <CopyFileToFolders Include="ArtCNN\ArtCNN-C4F32.hlsl" />
+    <CopyFileToFolders Include="ArtCNN\ArtCNN-C4F32-FP32.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <CopyFileToFolders Include="ACNet.hlsl">

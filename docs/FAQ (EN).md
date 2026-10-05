@@ -15,6 +15,12 @@ Please check the [Performance optimization](https://github.com/Blinue/Magpie/wik
 
 Magpie is designed to be non-intrusive, so it is unlikely to be detected as a cheating tool. There have been no reports of bans for using Magpie. Nevertheless, you should be aware of the risks of using the software.
 
+## Two misaligned cursors during remote desktop or streaming
+
+Enable **Cursor → Remote cursor compatibility** in the application's profile (or the default profile), then restart scaling. This makes the system cursor's hidden state visible to remote capture software, leaving the cursor drawn by Magpie at the scaled position. Stopping scaling restores the original state. See upstream issue [#141](https://github.com/Blinue/Magpie/issues/141).
+
+This option is off by default. If the remote client forces a local cursor to be displayed, disable that cursor in the client as well. This option does not remap absolute pointer input; use the client's relative mouse (game) mode for a mouse or trackpad. For direct touch input, see [About touch support](About%20touch%20support.md).
+
 ## What is "3D game mode"?
 
 Enabling this option can change the behavior of the cursor and in-game overlay to optimize for 3D games. It is recommended to turn on this option when scaling 3D games.

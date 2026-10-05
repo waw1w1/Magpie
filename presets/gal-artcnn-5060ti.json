@@ -1,0 +1,41 @@
+{
+  "scalingModes": [
+    {
+      "name": "燃烧5060 Ti · 4K能效（720p／900p）",
+      "effects": [
+        {
+          "name": "ArtCNN\\ArtCNN-C4F16",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "ArtCNN\\ArtCNN-C4F16",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "Lanczos",
+          "scalingType": 1,
+          "scale": { "x": 1.0, "y": 1.0 },
+          "parameters": { "ARStrength": 0.75 }
+        }
+      ]
+    },
+    {
+      "name": "燃烧5060 Ti · 4K能效（1080p）",
+      "effects": [
+        {
+          "name": "ArtCNN\\ArtCNN-C4F16",
+          "scalingType": 0,
+          "scale": { "x": 1.0, "y": 1.0 }
+        },
+        {
+          "name": "Lanczos",
+          "scalingType": 1,
+          "scale": { "x": 1.0, "y": 1.0 },
+          "parameters": { "ARStrength": 0.75 }
+        }
+      ]
+    }
+  ]
+}

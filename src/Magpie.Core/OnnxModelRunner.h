@@ -8,7 +8,8 @@
 
 namespace Magpie {
 
-// Portable NCHW RGB inference and tile stitching. Windows production uses DML;
+// Portable NCHW RGB inference and tile stitching. Windows uses DirectML or the
+// optional TensorRT RTX plugin selected by the model descriptor;
 // the CPU provider exists for independent local numerical verification.
 class OnnxModelRunner {
 public:

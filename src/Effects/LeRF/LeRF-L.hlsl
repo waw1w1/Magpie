@@ -44,7 +44,7 @@ void Pass1(uint2 blockStart, uint3 tid) {
 	uint2 p = blockStart + Rmp8x8(tid.x);
 	if (any(p >= GetInputSize())) return;
 	float3 result = 0;
-	[loop] for (uint c = 0; c < 3; ++c) {
+	[unroll] for (uint c = 0; c < 3; ++c) {
 		[loop] for (uint mode = 0; mode < 3; ++mode) {
 			[loop] for (uint r = 0; r < 4; ++r) {
 				result[c] += Simplex(LUT, GatherTaps(INPUT, int2(p), mode, r, c), mode).x;
@@ -85,25 +85,29 @@ void Pass2(uint2 blockStart, uint3 tid) {
 //!OUT OUTPUT
 //!STYLE PS
 float4 Pass3(float2 pos) {
-	if (any(GetScale() < 1.0)) return INPUT.SampleLevel(SL, pos, 0);
-	float2 projected = pos * GetInputSize() - 0.5;
-	// Authors' evaluation uses support size 2 for both L and G.
-	int2 first = int2(ceil(projected - 1.0 - 1e-6));
-	float3 sum = 0, total = 0;
-	[unroll] for (int y = 0; y < 2; ++y) {
-		[unroll] for (int x = 0; x < 2; ++x) {
-			int2 q = first + int2(x, y);
-			int2 edge = clamp(q, 0, int2(GetInputSize()) - 1);
-			float2 distance = projected - float2(q);
-			float3 alpha = HYPER.Load(int3(edge, 0)).rgb * 2.0 - 1.0;
-			float3 weight = max(1.0 - alpha * abs(distance.x), 0.0) * max(1.0 - alpha * abs(distance.y), 0.0);
-			if (any(abs(distance) > 1.0)) weight = 0;
-			// Extend the image as well as the parameters: zero padding darkens
-			// window borders even for a constant white input.
-			sum += weight * PREP.Load(int3(edge, 0)).rgb;
-			total += weight;
+	float4 result = INPUT.SampleLevel(SL, pos, 0);
+	// A single return avoids FXC's uninitialized-return warning after inlining.
+	if (all(GetScale() >= 1.0)) {
+		float2 projected = pos * GetInputSize() - 0.5;
+		// Authors' evaluation uses support size 2 for both L and G.
+		int2 first = int2(ceil(projected - 1.0 - 1e-6));
+		float3 sum = 0, total = 0;
+		[unroll] for (int y = 0; y < 2; ++y) {
+			[unroll] for (int x = 0; x < 2; ++x) {
+				int2 q = first + int2(x, y);
+				int2 edge = clamp(q, 0, int2(GetInputSize()) - 1);
+				float2 distance = projected - float2(q);
+				float3 alpha = HYPER.Load(int3(edge, 0)).rgb * 2.0 - 1.0;
+				float3 weight = max(1.0 - alpha * abs(distance.x), 0.0) * max(1.0 - alpha * abs(distance.y), 0.0);
+				if (any(abs(distance) > 1.0)) weight = 0;
+				// Extend the image as well as the parameters: zero padding darkens
+				// window borders even for a constant white input.
+				sum += weight * PREP.Load(int3(edge, 0)).rgb;
+				total += weight;
+			}
 		}
+		float3 color = sum / max(total, 1e-30);
+		result.rgb = saturate(round(color * 255.0) / 255.0);
 	}
-	float3 color = sum / max(total, 1e-30);
-	return float4(saturate(round(color * 255.0) / 255.0), INPUT.SampleLevel(SL, pos, 0).a);
+	return result;
 }
