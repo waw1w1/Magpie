@@ -28,7 +28,7 @@ struct State {
     unsigned setCursorMessages = 0;
     std::atomic<bool> cancel{false}, attached{false}, queueOk{true}, cleanupOk{true}, countKnown{false};
     HANDLE qRequest{}, qAck{}, qStop{}, qThread{}, oRequest{}, oAck{}, oStop{}, oThread{};
-    enum Command { Attach, Read, Hide, Restore, Detach };
+    enum Command { Attach, Read, Hide, Restore, Detach, ProbeCount };
     std::atomic<int> command{Read}, down{0}, count{0}, hides{0};
     std::atomic<DWORD> qError{0}, oError{0};
     std::atomic<HCURSOR> qCursor{nullptr}, oCursor{nullptr};
@@ -116,9 +116,10 @@ DWORD WINAPI QueueThread(void*) {
                 s.queueOk = false; s.qError = ERROR_INVALID_WINDOW_HANDLE; break;
             }
             if (!AttachThreadInput(self, owner, TRUE)) { s.queueOk = false; s.qError = GetLastError(); }
-            else { s.attached = true; ProbeAttachedCount(); }
+            else { s.attached = true; }
             break;
         }
+        case State::ProbeCount: ProbeAttachedCount(); break;
         case State::Hide:
             do { s.count = ShowCursor(FALSE); s.countKnown = true; ++s.hides; }
             while (s.count >= 0 && s.hides < 128);
@@ -307,7 +308,23 @@ int wmain(int argc, wchar_t** argv) {
                 afterInput.flags, static_cast<void*>(afterInput.hCursor), afterInput.ptScreenPos.x, afterInput.ptScreenPos.y);
         }
         Transition("baseline_unattached", 0, points[0], true); Transition("baseline_unattached", 1, points[1], true);
-        Queue(State::Attach);
+        // Magpie globally hides before its asynchronous worker first attaches.
+        // Observe attachment and the production FALSE/TRUE count probe separately.
+        Transition("seed_visible_before_global_attach", 0, points[0], true);
+        Global(false); Snapshot("global_before_attach", 0, points[0]);
+        Queue(State::Attach); Snapshot("global_after_attach_before_probe", 0, points[0]);
+        Queue(State::ProbeCount); Snapshot("global_after_count_probe", 0, points[0]);
+        Queue(State::Hide);
+        Snapshot("global_attach_probe_then_queue", 0, points[0]);
+        Transition("global_attach_probe_then_queue", 0, points[0], false);
+        Transition("global_attach_probe_then_queue", 1, points[1], false);
+        // Also follow shutdown: balance the queue and detach before global restore.
+        Queue(State::Detach); Snapshot("detached_before_global_restore", 1, points[1]);
+        Global(true); Snapshot("global_attach_restored_before_move", 1, points[1]);
+        Transition("global_attach_restored", 0, points[0], true);
+        Transition("global_attach_restored", 1, points[1], true);
+
+        Queue(State::Attach); Queue(State::ProbeCount);
         Transition("baseline_attached", 0, points[0], true); Transition("baseline_attached", 1, points[1], true);
         const char* stages[]{"queue_only", "global_only", "global_then_queue_restore_GQ", "queue_then_global_restore_GQ",
             "global_then_queue_restore_QG", "queue_then_global_restore_QG"};
@@ -332,6 +349,7 @@ int wmain(int argc, wchar_t** argv) {
         }
         Snapshot("before_detach", 1, points[1]); Queue(State::Detach);
         Snapshot("after_detach", 1, points[1]);
+
     } catch (const Failure& failure) {
         result = failure.code; std::printf("STOP reason=%s code=%d\n", failure.reason, failure.code);
     } catch (...) { result = ProbeError; std::puts("STOP unexpected C++ exception"); }

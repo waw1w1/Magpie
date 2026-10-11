@@ -58,6 +58,11 @@ No synthetic input is added during the hiding-order observations.
 For each global backend, the matrix covers queue hiding alone, global hiding alone,
 global→queue and queue→global hiding, both restoration orders, A→B shape/position
 changes while hidden, and still observations before/after explicit detach.
+Before the already-attached matrix, a fresh worker follows Magpie's initial handoff order:
+global hide → attach → balanced queue-count probe → queue hide. It then balances
+the queue and detaches before restoring global visibility, as at shutdown.
+Read-only still samples separate attachment, the balanced count probe, and hiding
+so any metadata transition can be attributed to the appropriate operation.
 
 Each case seeds visible A and samples immediately after hiding, **before** changing
 the owner's cursor or position. It also samples between restoration operations and
@@ -65,8 +70,8 @@ before moving again. Catch-up behavior is recorded, not asserted; the next case
 must establish a fresh visible baseline.
 
 `SAMPLE` logs global flags/handle/position and expected values. `QUEUE` logs the
-worker's shape, owned hide balance and **last-known** display count. Only the
-attachment baseline probes the count using balanced ShowCursor calls; normal
+worker's shape, owned hide balance and **last-known** display count. Explicit
+`ProbeCount` commands use balanced ShowCursor calls; normal
 snapshots call GetCursor only, so measurement does not pulse cursor visibility.
 The user32 backend uses Magpie's undocumented `ShowSystemCursor` signature and
 explicitly logs that the void API cannot report success. The Magnification backend
