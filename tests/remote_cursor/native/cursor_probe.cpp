@@ -240,13 +240,16 @@ void Transition(const char* stage, int shape, POINT point, bool strict) {
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
-    if (argc != 3 || wcscmp(argv[1], L"--initial-global-visible") ||
-        (wcscmp(argv[2], L"--backend=user32") && wcscmp(argv[2], L"--backend=magnification"))) {
+    if ((argc != 3 && argc != 4) || wcscmp(argv[1], L"--initial-global-visible") ||
+        (wcscmp(argv[2], L"--backend=user32") && wcscmp(argv[2], L"--backend=magnification")) ||
+        (argc == 4 && wcscmp(argv[3], L"--initial-order=global-first") && wcscmp(argv[3], L"--initial-order=queue-first"))) {
         std::puts("ENVIRONMENT_UNAVAILABLE: requires --initial-global-visible --backend=user32|magnification; "
+            "optional --initial-order=global-first|queue-first; "
             "isolated interactive desktop only. No global-hide getter exists in the public Magnification API.");
         return EnvironmentUnavailable;
     }
     setvbuf(stdout, nullptr, _IONBF, 0);
+    const bool globalFirst = argc == 3 || !wcscmp(argv[3], L"--initial-order=global-first");
     int result = 0, originalCount = 0; bool countSaved = false, positionSaved = false;
     POINT originalPosition{}; HWND originalForeground = GetForegroundWindow();
     s.ui = GetCurrentThreadId(); backend = wcscmp(argv[2], L"--backend=user32") ? "magnification" : "user32";
@@ -308,16 +311,43 @@ int wmain(int argc, wchar_t** argv) {
                 afterInput.flags, static_cast<void*>(afterInput.hCursor), afterInput.ptScreenPos.x, afterInput.ptScreenPos.y);
         }
         Transition("baseline_unattached", 0, points[0], true); Transition("baseline_unattached", 1, points[1], true);
-        // Magpie globally hides before its asynchronous worker first attaches.
-        // Observe attachment and the production FALSE/TRUE count probe separately.
+        // Compare Magpie's first attachment against a fresh queue-only control.
+        // No owner SetCursor/SetCursorPos occurs during the still observations.
+        std::printf("FIRST_CASE order=%s\n", globalFirst ? "global-first" : "queue-first");
         Transition("seed_visible_before_global_attach", 0, points[0], true);
-        Global(false); Snapshot("global_before_attach", 0, points[0]);
-        Queue(State::Attach); Snapshot("global_after_attach_before_probe", 0, points[0]);
-        Queue(State::ProbeCount); Snapshot("global_after_count_probe", 0, points[0]);
+        if (globalFirst) Global(false);
+        Snapshot("first_before_attach", 0, points[0]);
+        Queue(State::Attach); Snapshot("first_after_attach_before_probe", 0, points[0]);
+        Queue(State::ProbeCount); Snapshot("first_after_count_probe", 0, points[0]);
         Queue(State::Hide);
-        Snapshot("global_attach_probe_then_queue", 0, points[0]);
-        Transition("global_attach_probe_then_queue", 0, points[0], false);
-        Transition("global_attach_probe_then_queue", 1, points[1], false);
+        const ULONGLONG hiddenAt = GetTickCount64();
+        Snapshot("first_after_queue_hide", 0, points[0]);
+        for (DWORD at : {50UL, 250UL, 1000UL}) {
+            const ULONGLONG elapsed = GetTickCount64() - hiddenAt;
+            if (elapsed < at) PumpWait(nullptr, static_cast<DWORD>(at - elapsed));
+            std::printf("STILL_WAIT target_ms=%lu elapsed_ms=%llu setcursor_messages=%u\n",
+                at, static_cast<unsigned long long>(GetTickCount64() - hiddenAt), s.setCursorMessages);
+            Snapshot("first_still_wait", 0, points[0]);
+        }
+        // Reproduce a subsequent production poll without owner input or movement.
+        Queue(State::ProbeCount); Snapshot("first_repeat_count_probe_immediate", 0, points[0]);
+        PumpWait(nullptr, 100);
+        Snapshot("first_after_repeat_count_probe", 0, points[0]);
+        if (!globalFirst) {
+            Global(false); Snapshot("first_queue_then_global_immediate", 0, points[0]);
+            PumpWait(nullptr, 100);
+            Snapshot("first_queue_then_global", 0, points[0]);
+        }
+        const HCURSOR previous = SetCursor(s.shapes[0]);
+        std::printf("OWNER_REASSERT previous=%p current=%p pointer_move=none\n",
+            static_cast<void*>(previous), static_cast<void*>(GetCursor()));
+        Snapshot("first_owner_reassert_immediate", 0, points[0]);
+        PumpWait(nullptr, 100); Snapshot("first_after_owner_reassert", 0, points[0]);
+        Require(SetCursorPos(points[0].x, points[0].y), "same-position update", EnvironmentUnavailable);
+        Snapshot("first_same_position_update_immediate", 0, points[0]);
+        PumpWait(nullptr, 100); Snapshot("first_after_same_position_update", 0, points[0]);
+        Transition("first_shape_transitions", 0, points[0], false);
+        Transition("first_shape_transitions", 1, points[1], false);
         // Also follow shutdown: balance the queue and detach before global restore.
         Queue(State::Detach); Snapshot("detached_before_global_restore", 1, points[1]);
         Global(true); Snapshot("global_attach_restored_before_move", 1, points[1]);

@@ -31,7 +31,10 @@ out\cursor_probe.exe --initial-global-visible --backend=user32
 out\cursor_probe.exe --initial-global-visible --backend=magnification
 ```
 
-The `build` workflow runs the two backends on separate Windows runners only when
+The optional `--initial-order=queue-first` starts with a fresh queue-only control;
+the default is `--initial-order=global-first`, matching Magpie's first attachment.
+
+The `build` workflow runs both initial orders and backends on separate Windows runners only when
 `workflow_dispatch` explicitly enables `remote_cursor_probe` (default: false).
 Ordinary push/PR builds do not execute this UI experiment. No software is installed
 by the launcher; no RDP, autologon, desktop assignment or security settings change.
@@ -63,6 +66,13 @@ global hide → attach → balanced queue-count probe → queue hide. It then ba
 the queue and detaches before restoring global visibility, as at shutdown.
 Read-only still samples separate attachment, the balanced count probe, and hiding
 so any metadata transition can be attributed to the appropriate operation.
+It waits until 50, 250, and 1000 ms after hiding, then repeats the production count
+probe and waits another 100 ms, without changing the owner's shape or position.
+The `queue-first` control omits global hiding until those observations finish,
+then hides globally and samples after 100 ms. Both modes next reassert the owner's
+same cursor without movement, sample after 100 ms, then set the same pointer position
+and sample again. These later steps are sequential interventions: if an earlier step
+already refreshed metadata, later hidden samples do not prove those steps were needed.
 
 Each case seeds visible A and samples immediately after hiding, **before** changing
 the owner's cursor or position. It also samples between restoration operations and

@@ -44,6 +44,7 @@ jobs:
       fail-fast: false
       matrix:
         backend: ['user32', 'magnification']
+        initial-order: ['global-first', 'queue-first']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -52,7 +53,7 @@ jobs:
       - name: Build the native cursor probe
         run: python tests/remote_cursor/native/build.py
       - name: Observe native cursor hiding order
-        run: ./tests/remote_cursor/native/out/cursor_probe.exe --initial-global-visible --backend=${{ matrix.backend }}
+        run: ./tests/remote_cursor/native/out/cursor_probe.exe --initial-global-visible --backend=${{ matrix.backend }} --initial-order=${{ matrix.initial-order }}
 
   remote-cursor-tests:
     runs-on: ubuntu-latest
