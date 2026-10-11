@@ -12,6 +12,7 @@ on:
         '*.props',
         'scripts/publish.py',
         'src/**',
+        'tests/remote_cursor/**',
       ]
   pull_request:
     paths:
@@ -21,6 +22,7 @@ on:
         '*.props',
         'scripts/publish.py',
         'src/**',
+        'tests/remote_cursor/**',
       ]
 
 concurrency:
@@ -28,6 +30,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  remote-cursor-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Test remote cursor handoffs
+        run: python3 tests/remote_cursor/run.py
+
   build:
     runs-on: windows-2025-vs2026
     timeout-minutes: 60
