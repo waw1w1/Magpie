@@ -222,7 +222,7 @@ void Transition(const char* stage, int shape, POINT point, bool strict) {
     s.shape = shape;
     const unsigned before = s.setCursorMessages;
     Require(SetCursorPos(point.x, point.y), "SetCursorPos", EnvironmentUnavailable);
-    // Baseline must get a real WM_SETCURSOR through the pump; no synthesized input/messages.
+    // Require delivery through the input desktop, not a manually sent WM_SETCURSOR.
     const ULONGLONG deadline = GetTickCount64() + Timeout;
     do { PumpWait(nullptr, 20); } while (strict && s.setCursorMessages == before && GetTickCount64() < deadline);
     if (strict) Require(s.setCursorMessages > before, "WM_SETCURSOR not delivered", EnvironmentUnavailable);
@@ -286,6 +286,26 @@ int wmain(int argc, wchar_t** argv) {
         Require(ClientToScreen(s.window, &points[0]) && ClientToScreen(s.window, &points[1]), "ClientToScreen");
         // Start at B so the baseline A transition necessarily moves the pointer.
         Require(SetCursorPos(points[1].x, points[1].y), "initial pointer positioning", EnvironmentUnavailable); PumpWait(nullptr, 100);
+        TargetGate(points[1]);
+        CURSORINFO initial{}; initial.cbSize = sizeof(initial);
+        Require(GetCursorInfo(&initial), "initial cursor info", EnvironmentUnavailable);
+        std::printf("BASELINE_INPUT flags=%lu handle=%p\n", initial.flags, static_cast<void*>(initial.hCursor));
+        if (initial.flags & CURSOR_SUPPRESSED) {
+            // SetCursorPos does not establish mouse input on every hosted desktop.
+            // One ordinary move inside our own client area may leave touch/pen mode.
+            // Do not alter system settings or weaken the observer's baseline gate.
+            INPUT input{}; input.type = INPUT_MOUSE;
+            input.mi.dx = 1; input.mi.dwFlags = MOUSEEVENTF_MOVE;
+            const UINT sent = SendInput(1, &input, sizeof(input));
+            const DWORD error = sent == 1 ? 0 : GetLastError();
+            std::printf("BASELINE_INPUT mouse_move_sent=%u error=%lu buttons=none\n", sent, error);
+            Require(sent == 1, "baseline mouse move", EnvironmentUnavailable);
+            PumpWait(nullptr, 100);
+            CURSORINFO afterInput{}; afterInput.cbSize = sizeof(afterInput);
+            Require(GetCursorInfo(&afterInput), "cursor info after mouse move", EnvironmentUnavailable);
+            std::printf("BASELINE_INPUT after_mouse_move_flags=%lu handle=%p xy=%ld,%ld\n",
+                afterInput.flags, static_cast<void*>(afterInput.hCursor), afterInput.ptScreenPos.x, afterInput.ptScreenPos.y);
+        }
         Transition("baseline_unattached", 0, points[0], true); Transition("baseline_unattached", 1, points[1], true);
         Queue(State::Attach);
         Transition("baseline_attached", 0, points[0], true); Transition("baseline_attached", 1, points[1], true);

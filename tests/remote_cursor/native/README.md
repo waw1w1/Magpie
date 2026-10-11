@@ -49,6 +49,12 @@ A runner label or successful `OpenInputDesktop` alone does not satisfy this gate
 Initial UI display counts outside `[0,63]` conservatively fail a probe prerequisite;
 that does not prove the desktop itself is noninteractive.
 
+If Windows initially reports `CURSOR_SUPPRESSED`, the probe tries one ordinary
+relative `SendInput` mouse move (`dx=1`) inside its verified own client area, without clicks,
+before the baseline. This may switch away from touch/pen input; it is not guaranteed.
+The same strict observer baseline must still pass, or the experiment is unavailable.
+No synthetic input is added during the hiding-order observations.
+
 For each global backend, the matrix covers queue hiding alone, global hiding alone,
 global→queue and queue→global hiding, both restoration orders, A→B shape/position
 changes while hidden, and still observations before/after explicit detach.
@@ -101,3 +107,4 @@ and error propagation. They do not compile against the Windows SDK or execute Wi
 - [AttachThreadInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-attachthreadinput)
 - [GetUserObjectInformation](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getuserobjectinformationw)
 - [MagShowSystemCursor](https://learn.microsoft.com/en-us/windows/win32/api/magnification/nf-magnification-magshowsystemcursor)
+- [SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)
